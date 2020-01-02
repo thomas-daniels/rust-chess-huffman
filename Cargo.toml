@@ -1,0 +1,11 @@
+[package]
+name = "chess-huffman"
+version = "0.1.0"
+authors = ["Thomas Daniels"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+huffman-compress = "0.6.0"
+shakmaty = "0.16.1"
