@@ -5,7 +5,7 @@ use std::iter::FromIterator;
 
 /// Huffman weights from:
 /// https://github.com/lichess-org/compression/blob/master/src/main/java/game/Huffman.java#L64
-pub fn lichess_code() -> (Book<u8>, Tree<u8>) {
+pub fn code_from_lichess_weights() -> (Book<u8>, Tree<u8>) {
     let mut weights: HashMap<u8, u32> = HashMap::new();
     weights.insert(0, 225883932);
     weights.insert(1, 134956126);
