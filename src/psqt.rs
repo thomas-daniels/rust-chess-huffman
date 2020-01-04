@@ -1,7 +1,6 @@
-#![rustfmt::skip]
-
 /// Piece-square Tables as currently used in production by Lichess.
 /// https://github.com/lichess-org/compression/blob/master/src/main/java/game/Move.java#L75
+#[rustfmt::skip]
 pub static LICHESS: [[i16; 64]; 6] = [
     [   0,  0,  0,  0,  0,  0,  0,  0,
        50, 50, 50, 50, 50, 50, 50, 50,
