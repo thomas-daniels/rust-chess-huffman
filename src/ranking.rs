@@ -15,7 +15,12 @@ fn move_score(pos: &Chess, m: &Move) -> Score {
     let to = Score::from(m.to());
     let from = Score::from(m.from().expect("no drops"));
 
-    promotion << 26 + capture << 25 + pawn_defense << 22 + move_value << 12 + to << 6 + from
+    (promotion << 26)
+        + (capture << 25)
+        + (pawn_defense << 22)
+        + (move_value << 12)
+        + (to << 6)
+        + from
 }
 
 fn any_defending_pawns(pos: &Chess, m: &Move) -> bool {
