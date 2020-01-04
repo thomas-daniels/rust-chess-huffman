@@ -3,6 +3,16 @@ use shakmaty::{Chess, Color, Move, MoveList, Piece, Position, Role, Setup, Squar
 
 type Score = i32;
 
+fn from_position(pos: &Chess) -> Vec<(Move, Score)> {
+    let legals = pos.legals();
+    let mut moves_scores: Vec<(Move, Score)> = legals
+        .iter()
+        .map(|m| (m.clone(), move_score(&pos, &m)))
+        .collect();
+    moves_scores.sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+    moves_scores
+}
+
 fn move_score(pos: &Chess, m: &Move) -> Score {
     let promotion = Score::from(m.promotion().unwrap_or(Role::Pawn)) - 1;
     let capture = Score::from(m.is_capture());
