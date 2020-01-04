@@ -1,6 +1,5 @@
-use bit_vec::BitVec;
 use huffman_compress::{Book, CodeBuilder, Tree};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 use std::iter::FromIterator;
 
 /// Huffman weights from:
