@@ -53,3 +53,98 @@ fn move_value(turn: Color, m: &Move) -> i16 {
     let role = m.role();
     piece_value(role.of(turn), m.to()) - piece_value(role.of(turn), m.from().expect("no drops"))
 }
+
+#[cfg(test)]
+mod tests {
+    // These tests are not very extensive at this point.
+    // They're mostly there to tell me if I'm badly breaking something.
+    use super::*;
+
+    #[test]
+    fn test_piece_value() {
+        assert_eq!(
+            piece_value(
+                Piece {
+                    color: Color::White,
+                    role: Role::Knight
+                },
+                Square::E3
+            ),
+            15
+        );
+        assert_eq!(
+            piece_value(
+                Piece {
+                    color: Color::White,
+                    role: Role::Knight
+                },
+                Square::D5
+            ),
+            20
+        );
+    }
+
+    #[test]
+    fn test_move_value() {
+        assert_eq!(
+            move_value(
+                Color::White,
+                &Move::Normal {
+                    role: Role::Knight,
+                    from: Square::E3,
+                    to: Square::D5,
+                    capture: None,
+                    promotion: None
+                }
+            ),
+            5
+        );
+    }
+
+    #[test]
+    fn test_any_defending_pawns() {
+        assert!(any_defending_pawns(
+            &Chess::default(),
+            &Move::Normal {
+                role: Role::Queen,
+                from: Square::E3,
+                to: Square::E6,
+                capture: None,
+                promotion: None,
+            }
+        ));
+    }
+
+    #[test]
+    fn test_move_score() {
+        assert_eq!(
+            move_score(
+                &Chess::default(),
+                &Move::Normal {
+                    role: Role::Pawn,
+                    from: Square::E2,
+                    to: Square::E4,
+                    capture: None,
+                    promotion: None,
+                }
+            ),
+            (6 << 22) + (564 << 12) + (28 << 6) + 12
+        );
+    }
+
+    #[test]
+    fn test_e4_highest_score() {
+        let from_starting_position = from_position(&Chess::default());
+        let highest_choice = &from_starting_position[0].0;
+        assert_eq!(
+            highest_choice,
+            &Move::Normal {
+                role: Role::Pawn,
+                from: Square::E2,
+                to: Square::E4,
+                capture: None,
+                promotion: None,
+            }
+        );
+    }
+}
