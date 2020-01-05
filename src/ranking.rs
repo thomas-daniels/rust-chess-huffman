@@ -3,6 +3,10 @@ use shakmaty::{Chess, Color, Move, MoveList, Piece, Position, Role, Setup, Squar
 
 type Score = i32;
 
+fn move_rank(pos: &Chess, m: &Move) -> Option<usize> {
+    from_position(pos).iter().position(|x| &x == &m)
+}
+
 fn from_position(pos: &Chess) -> Vec<Move> {
     let mut legals = pos.legals();
     legals.sort_unstable_by_key(|m| -move_score(&pos, &m));
@@ -132,6 +136,20 @@ mod tests {
                 capture: None,
                 promotion: None,
             }
+        );
+
+        assert_eq!(
+            move_rank(
+                &Chess::default(),
+                &Move::Normal {
+                    role: Role::Pawn,
+                    from: Square::E2,
+                    to: Square::E4,
+                    capture: None,
+                    promotion: None,
+                }
+            ),
+            Some(0)
         );
     }
 }
