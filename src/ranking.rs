@@ -16,7 +16,7 @@ fn from_position(pos: &Chess) -> Vec<(Move, Score)> {
 fn move_score(pos: &Chess, m: &Move) -> Score {
     let promotion = Score::from(m.promotion().unwrap_or(Role::Pawn)) - 1;
     let capture = Score::from(m.is_capture());
-    let pawn_defense: Score = if any_defending_pawns(pos, m) {
+    let pawn_defense: Score = if any_defending_pawns(pos, m.to()) {
         6 - Score::from(m.role())
     } else {
         6
@@ -33,8 +33,8 @@ fn move_score(pos: &Chess, m: &Move) -> Score {
         + from
 }
 
-fn any_defending_pawns(pos: &Chess, m: &Move) -> bool {
-    (shakmaty::attacks::pawn_attacks(pos.turn(), m.to()) & pos.board().pawns() & pos.them()).any()
+fn any_defending_pawns(pos: &Chess, to: Square) -> bool {
+    (shakmaty::attacks::pawn_attacks(pos.turn(), to) & pos.board().pawns() & pos.them()).any()
 }
 
 // https://github.com/niklasf/rust-pgn-reader/blob/compression-with-spsa/examples/compression.rs#L121
@@ -103,16 +103,7 @@ mod tests {
 
     #[test]
     fn test_any_defending_pawns() {
-        assert!(any_defending_pawns(
-            &Chess::default(),
-            &Move::Normal {
-                role: Role::Queen,
-                from: Square::E3,
-                to: Square::E6,
-                capture: None,
-                promotion: None,
-            }
-        ));
+        assert!(any_defending_pawns(&Chess::default(), Square::E6));
     }
 
     #[test]
