@@ -3,11 +3,11 @@ use shakmaty::{Chess, Color, Move, MoveList, Piece, Position, Role, Setup, Squar
 
 type Score = i32;
 
-fn move_rank(pos: &Chess, m: &Move) -> Option<usize> {
+pub fn move_rank(pos: &Chess, m: &Move) -> Option<usize> {
     from_position(pos).iter().position(|x| &x == &m)
 }
 
-fn from_position(pos: &Chess) -> Vec<Move> {
+pub fn from_position(pos: &Chess) -> Vec<Move> {
     let mut legals = pos.legals();
     legals.sort_unstable_by_key(|m| -move_score(&pos, &m));
     legals.to_vec()
