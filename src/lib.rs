@@ -101,4 +101,16 @@ mod tests {
         let decoded = decode_game(&encoded).0;
         assert_eq!(decoded, moves);
     }
+
+    #[test]
+    fn expected_error() {
+        let moves = vec![Move::Normal {
+            role: Role::Pawn,
+            from: Square::E2,
+            to: Square::E5,
+            capture: None,
+            promotion: None,
+        }];
+        assert!(encode_game(&moves).is_err());
+    }
 }
