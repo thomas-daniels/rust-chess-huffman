@@ -72,6 +72,11 @@ impl MoveByMoveEncoder {
 
         Ok(())
     }
+
+    pub fn clear(&mut self) {
+        self.pos = Chess::default();
+        self.buffer.clear();
+    }
 }
 
 #[cfg(test)]
