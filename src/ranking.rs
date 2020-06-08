@@ -1,5 +1,5 @@
 use super::psqt;
-use shakmaty::{Chess, Color, Move, MoveList, Piece, Position, Role, Setup, Square};
+use shakmaty::{Chess, Color, Move, Piece, Position, Role, Setup, Square};
 
 type Score = i32;
 
