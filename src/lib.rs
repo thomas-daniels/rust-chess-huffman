@@ -1,4 +1,5 @@
 mod codes;
+pub mod pgn;
 mod psqt;
 mod ranking;
 

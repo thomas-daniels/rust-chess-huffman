@@ -8,5 +8,6 @@ edition = "2018"
 
 [dependencies]
 huffman-compress = "0.6.0"
-shakmaty = "0.16.1"
+shakmaty = "0.16"
 bit-vec = "0.6"
+pgn-reader = "0.15.0"
