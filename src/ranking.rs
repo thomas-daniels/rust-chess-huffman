@@ -4,7 +4,7 @@ use shakmaty::{Chess, Color, Move, Piece, Position, Role, Setup, Square};
 type Score = i32;
 
 pub fn move_rank(pos: &Chess, m: &Move) -> Option<usize> {
-    from_position(pos).iter().position(|x| &x == &m)
+    from_position(pos).iter().position(|x| x == m)
 }
 
 pub fn from_position(pos: &Chess) -> Vec<Move> {
