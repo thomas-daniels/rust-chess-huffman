@@ -27,6 +27,12 @@ impl Encoder {
     }
 }
 
+impl Default for Encoder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Visitor for Encoder {
     type Result = std::result::Result<BitVec, Box<dyn std::error::Error>>;
 
