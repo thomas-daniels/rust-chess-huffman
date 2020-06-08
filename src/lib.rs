@@ -3,6 +3,7 @@ mod psqt;
 mod ranking;
 
 use bit_vec::BitVec;
+use huffman_compress::Book;
 use shakmaty::{Chess, Move, Position};
 use std::fmt;
 
@@ -24,19 +25,11 @@ impl std::convert::From<huffman_compress::EncodeError> for InvalidGameError {
 }
 
 pub fn encode_game(moves: &[Move]) -> Result<BitVec, InvalidGameError> {
-    let mut buffer = BitVec::new();
-    let (book, _) = codes::code_from_lichess_weights();
-    let mut pos = Chess::default();
+    let mut encoder = MoveByMoveEncoder::new();
     for m in moves {
-        match ranking::move_rank(&pos, m) {
-            Some(rank) => {
-                book.encode(&mut buffer, &(rank as u8))?;
-                pos = pos.play(m).unwrap();
-            }
-            None => return Err(InvalidGameError {}),
-        }
+        encoder.add_move(&m)?;
     }
-    Ok(buffer)
+    Ok(encoder.buffer)
 }
 
 pub fn decode_game(bits: &BitVec) -> (Vec<Move>, Chess) {
@@ -50,6 +43,35 @@ pub fn decode_game(bits: &BitVec) -> (Vec<Move>, Chess) {
         moves.push(m);
     }
     (moves, pos)
+}
+
+pub struct MoveByMoveEncoder {
+    book: Book<u8>,
+    pos: Chess,
+    pub buffer: BitVec,
+}
+
+impl MoveByMoveEncoder {
+    pub fn new() -> Self {
+        let (book, _) = codes::code_from_lichess_weights();
+        Self {
+            book,
+            pos: Chess::default(),
+            buffer: BitVec::new(),
+        }
+    }
+
+    pub fn add_move(&mut self, m: &Move) -> Result<(), InvalidGameError> {
+        match ranking::move_rank(&self.pos, m) {
+            Some(rank) => {
+                self.book.encode(&mut self.buffer, &(rank as u8))?;
+                self.pos.play_unchecked(m);
+            }
+            None => return Err(InvalidGameError {}),
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
