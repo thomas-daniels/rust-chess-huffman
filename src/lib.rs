@@ -46,6 +46,17 @@ pub fn decode_game(bits: &BitVec) -> (Vec<Move>, Chess) {
     (moves, pos)
 }
 
+pub fn decode_move_by_move<T: MoveByMoveDecoder>(bits: &BitVec, decoder: &mut T) {
+    let (_, tree) = codes::code_from_lichess_weights();
+    let ranks = tree.decoder(bits, 256);
+    let mut pos = Chess::default();
+    for rank in ranks {
+        let m = ranking::from_position(&pos).remove(rank as usize);
+        pos = pos.play(&m).unwrap();
+        decoder.decoded_move(m, &pos);
+    }
+}
+
 pub struct MoveByMoveEncoder {
     book: Book<u8>,
     pos: Chess,
@@ -84,6 +95,10 @@ impl Default for MoveByMoveEncoder {
     fn default() -> Self {
         Self::new()
     }
+}
+
+pub trait MoveByMoveDecoder {
+    fn decoded_move(&mut self, mv: Move, position: &Chess);
 }
 
 #[cfg(test)]
@@ -146,5 +161,62 @@ mod tests {
             promotion: None,
         }];
         assert!(encode_game(&moves).is_err());
+    }
+
+    struct TestDecoder {
+        moves: Vec<Move>,
+    }
+
+    impl MoveByMoveDecoder for TestDecoder {
+        fn decoded_move(&mut self, mv: Move, _position: &Chess) {
+            self.moves.push(mv);
+        }
+    }
+
+    #[test]
+    fn encode_decode_consistency_move_by_move() {
+        let moves = vec![
+            Move::Normal {
+                role: Role::Pawn,
+                from: Square::D2,
+                to: Square::D4,
+                capture: None,
+                promotion: None,
+            },
+            Move::Normal {
+                role: Role::Pawn,
+                from: Square::E7,
+                to: Square::E5,
+                capture: None,
+                promotion: None,
+            },
+            Move::Normal {
+                role: Role::Pawn,
+                from: Square::D4,
+                to: Square::E5,
+                capture: Some(Role::Pawn),
+                promotion: None,
+            },
+            Move::Normal {
+                role: Role::King,
+                from: Square::E8,
+                to: Square::E7,
+                capture: None,
+                promotion: None,
+            },
+            Move::Normal {
+                role: Role::Queen,
+                from: Square::D1,
+                to: Square::D2,
+                capture: None,
+                promotion: None,
+            },
+        ];
+
+        let encoded = encode_game(&moves).unwrap();
+
+        let mut decoder = TestDecoder { moves: vec![] };
+        decode_move_by_move(&encoded, &mut decoder);
+        assert_eq!(decoder.moves, moves);
     }
 }
