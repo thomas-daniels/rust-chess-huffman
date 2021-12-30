@@ -8,7 +8,7 @@ pub fn move_rank(pos: &Chess, m: &Move) -> Option<usize> {
 }
 
 pub fn from_position(pos: &Chess) -> Vec<Move> {
-    let mut legals = pos.legals();
+    let mut legals = pos.legal_moves();
     legals.sort_unstable_by_key(|m| -move_score(&pos, &m));
     legals.to_vec()
 }
