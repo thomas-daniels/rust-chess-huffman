@@ -67,8 +67,8 @@ struct TestDecoder {
 }
 
 impl MoveByMoveDecoder for TestDecoder {
-    fn decoded_move(&mut self, mv: Move, _position: &Chess) {
-        self.moves.push(mv);
+    fn decoded_move(&mut self, mv: &Move, _position: &Chess) {
+        self.moves.push(mv.clone());
     }
 }
 
