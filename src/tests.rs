@@ -46,7 +46,7 @@ fn encode_decode_consistency() {
     let moves = short_game_moves();
 
     let encoded = encode_game(&moves).unwrap();
-    let decoded = decode_game(&encoded).0;
+    let decoded = decode_game(&encoded).unwrap().0;
     assert_eq!(decoded, moves);
 }
 
@@ -79,7 +79,7 @@ fn encode_decode_consistency_move_by_move() {
     let encoded = encode_game(&moves).unwrap();
 
     let mut decoder = TestDecoder { moves: vec![] };
-    decode_move_by_move(&encoded, &mut decoder);
+    decode_move_by_move(&encoded, &mut decoder).unwrap();
     assert_eq!(decoder.moves, moves);
 }
 
@@ -88,6 +88,6 @@ fn encode_decode_consistency_pgn() {
     let moves = short_game_moves();
 
     let encoded = encode_pgn("1. d4 e5 2. dxe5 Ke7 3. Qd2").unwrap();
-    let decoded = decode_game(&encoded).0;
+    let decoded = decode_game(&encoded).unwrap().0;
     assert_eq!(decoded, moves);
 }

@@ -2,8 +2,9 @@ use huffman_compress::{Book, CodeBuilder, Tree};
 use std::collections::HashMap;
 use std::iter::FromIterator;
 
-/// Huffman weights from:
-/// https://github.com/lichess-org/compression/blob/master/src/main/java/game/Huffman.java#L64
+// Huffman weights from:
+// https://github.com/lichess-org/compression/blob/master/src/main/java/game/Huffman.java#L64
+#[allow(clippy::too_many_lines)]
 pub fn code_from_lichess_weights() -> (Book<u8>, Tree<u8>) {
     let mut weights: HashMap<u8, u32> = HashMap::new();
     weights.insert(0, 225_883_932);

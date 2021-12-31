@@ -41,6 +41,7 @@ impl Visitor for Encoder {
         self.mbm.clear();
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     fn san(&mut self, san_plus: SanPlus) {
         match self.san_may_error(san_plus) {
             Ok(()) => {}
@@ -53,13 +54,12 @@ impl Visitor for Encoder {
     }
 
     fn end_game(&mut self) -> Self::Result {
-        match self.error {
-            None => Ok(self.mbm.buffer.clone()),
-            _ => {
-                let mut swap = None;
-                std::mem::swap(&mut swap, &mut self.error);
-                Err(swap.unwrap())
-            }
+        if self.error.is_none() {
+            Ok(self.mbm.buffer.clone())
+        } else {
+            let mut swap = None;
+            std::mem::swap(&mut swap, &mut self.error);
+            Err(swap.unwrap())
         }
     }
 }
@@ -118,7 +118,7 @@ mod tests {
             },
         ];
 
-        assert_eq!(decode_game(&bits).0, moves);
+        assert_eq!(decode_game(&bits).unwrap().0, moves);
     }
 
     #[test]

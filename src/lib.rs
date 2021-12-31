@@ -8,7 +8,7 @@ mod tests;
 use bit_vec::BitVec;
 use huffman_compress::Book;
 use shakmaty::san::{ParseSanError, SanError};
-use shakmaty::{Chess, Move, Position};
+use shakmaty::{Chess, Move, PlayError, Position};
 use std::fmt;
 
 #[derive(Debug)]
@@ -31,6 +31,17 @@ impl std::error::Error for GameEncodeError {}
 impl fmt::Display for GameEncodeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Failed to encode chess game: {}", &self.explanation)
+    }
+}
+
+#[derive(Debug)]
+pub struct GameDecodeError {}
+
+impl std::error::Error for GameDecodeError {}
+
+impl fmt::Display for GameDecodeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Cannot decode invalid bit vector")
     }
 }
 
@@ -70,16 +81,22 @@ impl From<ParseSanError> for GameEncodeError {
     }
 }
 
+impl From<PlayError<Chess>> for GameDecodeError {
+    fn from(_: PlayError<Chess>) -> Self {
+        Self {}
+    }
+}
+
 pub fn encode_game(moves: &[Move]) -> Result<BitVec, GameEncodeError> {
     let mut encoder = MoveByMoveEncoder::new();
     for m in moves {
-        encoder.add_move(&m)?;
+        encoder.add_move(m)?;
     }
     Ok(encoder.buffer)
 }
 
 pub fn encode_pgn<T: AsRef<str>>(pgn: T) -> Result<BitVec, GameEncodeError> {
-    let mut reader = pgn_reader::BufferedReader::new_cursor(&pgn.as_ref()[..]);
+    let mut reader = pgn_reader::BufferedReader::new_cursor(pgn.as_ref());
 
     let mut encoder = pgn::Encoder::new();
     let bits = reader
@@ -99,28 +116,32 @@ pub fn encode_pgn_file<P: AsRef<std::path::Path>>(path: P) -> Result<BitVec, Gam
     Ok(bits)
 }
 
-pub fn decode_game(bits: &BitVec) -> (Vec<Move>, Chess) {
+pub fn decode_game(bits: &BitVec) -> Result<(Vec<Move>, Chess), GameDecodeError> {
     let (_, tree) = codes::code_from_lichess_weights();
     let ranks = tree.decoder(bits, 256);
     let mut moves = vec![];
     let mut pos = Chess::default();
     for rank in ranks {
         let m = ranking::from_position(&pos).remove(rank as usize);
-        pos = pos.play(&m).unwrap();
+        pos = pos.play(&m)?;
         moves.push(m);
     }
-    (moves, pos)
+    Ok((moves, pos))
 }
 
-pub fn decode_move_by_move<T: MoveByMoveDecoder>(bits: &BitVec, decoder: &mut T) {
+pub fn decode_move_by_move<T: MoveByMoveDecoder>(
+    bits: &BitVec,
+    decoder: &mut T,
+) -> Result<(), GameDecodeError> {
     let (_, tree) = codes::code_from_lichess_weights();
     let ranks = tree.decoder(bits, 256);
     let mut pos = Chess::default();
     for rank in ranks {
         let m = ranking::from_position(&pos).remove(rank as usize);
-        pos = pos.play(&m).unwrap();
+        pos = pos.play(&m)?;
         decoder.decoded_move(m, &pos);
     }
+    Ok(())
 }
 
 pub struct MoveByMoveEncoder {
@@ -130,6 +151,7 @@ pub struct MoveByMoveEncoder {
 }
 
 impl MoveByMoveEncoder {
+    #[must_use]
     pub fn new() -> Self {
         let (book, _) = codes::code_from_lichess_weights();
         Self {
@@ -142,6 +164,15 @@ impl MoveByMoveEncoder {
     pub fn add_move(&mut self, m: &Move) -> Result<(), GameEncodeError> {
         match ranking::move_rank(&self.pos, m) {
             Some(rank) => {
+                if rank > 255 {
+                    return Err(GameEncodeError {
+                        kind: GameEncodeErrorKind::HuffmanEncodeError,
+                        explanation: String::from(
+                            "Too many possible valid moves - is this a valid chess position?",
+                        ),
+                    });
+                }
+                #[allow(clippy::cast_possible_truncation)]
                 self.book.encode(&mut self.buffer, &(rank as u8))?;
                 self.pos.play_unchecked(m);
             }
