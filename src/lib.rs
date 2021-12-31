@@ -201,11 +201,12 @@ pub fn encode_pgn_file<P: AsRef<std::path::Path>>(path: P) -> EncodeResult<BitVe
     Ok(bits)
 }
 
-pub fn decode_game(bits: &BitVec) -> DecodeResult<(Vec<Move>, Chess)> {
+pub fn decode_game(bits: &BitVec) -> DecodeResult<(Vec<Move>, Vec<Chess>)> {
     let (_, tree) = codes::code_from_lichess_weights();
     let ranks = tree.decoder(bits, 256);
     let mut moves = vec![];
     let mut pos = Chess::default();
+    let mut positions = vec![];
     for rank in ranks {
         let valid_moves = ranking::from_position(&pos);
         let m = valid_moves
@@ -213,8 +214,9 @@ pub fn decode_game(bits: &BitVec) -> DecodeResult<(Vec<Move>, Chess)> {
             .ok_or_else(|| GameDecodeError {})?;
         pos.play_unchecked(m);
         moves.push(m.clone());
+        positions.push(pos.clone());
     }
-    Ok((moves, pos))
+    Ok((moves, positions))
 }
 
 pub fn decode_move_by_move<T: MoveByMoveDecoder>(
