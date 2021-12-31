@@ -171,7 +171,7 @@ pub fn encode_game(moves: &[Move]) -> EncodeResult<BitVec> {
 /// # Ok(())
 /// # }
 /// ```
-pub fn encode_pgn<T: AsRef<str>>(pgn: T) -> EncodeResult<BitVec> {
+pub fn encode_pgn<T: AsRef<[u8]>>(pgn: T) -> EncodeResult<BitVec> {
     let mut reader = pgn_reader::BufferedReader::new_cursor(pgn.as_ref());
 
     let mut encoder = pgn::Encoder::new();
