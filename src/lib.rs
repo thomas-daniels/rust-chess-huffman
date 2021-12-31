@@ -13,6 +13,9 @@ use shakmaty::san::{ParseSanError, SanError};
 use shakmaty::{Chess, Move, PlayError, Position};
 use std::fmt;
 
+pub type EncodeResult<T> = Result<T, GameEncodeError>;
+pub type DecodeResult<T> = Result<T, GameDecodeError>;
+
 /// Error when encoding a chess game.
 #[derive(Debug)]
 pub struct GameEncodeError {
@@ -139,7 +142,7 @@ impl From<PlayError<Chess>> for GameDecodeError {
 /// # Ok(())
 /// # }
 /// ```
-pub fn encode_game(moves: &[Move]) -> Result<BitVec, GameEncodeError> {
+pub fn encode_game(moves: &[Move]) -> EncodeResult<BitVec> {
     let mut encoder = MoveByMoveEncoder::new();
     for m in moves {
         encoder.add_move(m)?;
@@ -168,7 +171,7 @@ pub fn encode_game(moves: &[Move]) -> Result<BitVec, GameEncodeError> {
 /// # Ok(())
 /// # }
 /// ```
-pub fn encode_pgn<T: AsRef<str>>(pgn: T) -> Result<BitVec, GameEncodeError> {
+pub fn encode_pgn<T: AsRef<str>>(pgn: T) -> EncodeResult<BitVec> {
     let mut reader = pgn_reader::BufferedReader::new_cursor(pgn.as_ref());
 
     let mut encoder = pgn::Encoder::new();
@@ -187,7 +190,7 @@ pub fn encode_pgn<T: AsRef<str>>(pgn: T) -> Result<BitVec, GameEncodeError> {
 /// # Errors
 ///
 /// Will return `Err` if the file could not be read or if the PGN is invalid.
-pub fn encode_pgn_file<P: AsRef<std::path::Path>>(path: P) -> Result<BitVec, GameEncodeError> {
+pub fn encode_pgn_file<P: AsRef<std::path::Path>>(path: P) -> EncodeResult<BitVec> {
     let file = std::fs::File::open(path)?;
     let mut reader = pgn_reader::BufferedReader::new(file);
 
@@ -198,7 +201,7 @@ pub fn encode_pgn_file<P: AsRef<std::path::Path>>(path: P) -> Result<BitVec, Gam
     Ok(bits)
 }
 
-pub fn decode_game(bits: &BitVec) -> Result<(Vec<Move>, Chess), GameDecodeError> {
+pub fn decode_game(bits: &BitVec) -> DecodeResult<(Vec<Move>, Chess)> {
     let (_, tree) = codes::code_from_lichess_weights();
     let ranks = tree.decoder(bits, 256);
     let mut moves = vec![];
@@ -214,7 +217,7 @@ pub fn decode_game(bits: &BitVec) -> Result<(Vec<Move>, Chess), GameDecodeError>
 pub fn decode_move_by_move<T: MoveByMoveDecoder>(
     bits: &BitVec,
     decoder: &mut T,
-) -> Result<(), GameDecodeError> {
+) -> DecodeResult<()> {
     let (_, tree) = codes::code_from_lichess_weights();
     let ranks = tree.decoder(bits, 256);
     let mut pos = Chess::default();
@@ -282,7 +285,7 @@ impl MoveByMoveEncoder {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn add_move(&mut self, m: &Move) -> Result<(), GameEncodeError> {
+    pub fn add_move(&mut self, m: &Move) -> EncodeResult<()> {
         match ranking::move_rank(&self.pos, m) {
             Some(rank) => {
                 if rank > 255 {
