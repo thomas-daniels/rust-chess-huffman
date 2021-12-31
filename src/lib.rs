@@ -154,7 +154,7 @@ pub fn encode_game(moves: &[Move]) -> EncodeResult<BitVec> {
 ///
 /// # Arguments
 ///
-/// * `pgn` - The PGN string of the game.
+/// * `pgn` - The PGN of the game.
 ///
 /// # Errors
 ///
@@ -168,6 +168,8 @@ pub fn encode_game(moves: &[Move]) -> EncodeResult<BitVec> {
 /// # use chess_huffman::GameEncodeError;
 /// # fn try_main() -> Result<(), GameEncodeError> {
 /// let encoded = encode_pgn("1. e4 c5 2. Nf3 e6 3. c3 d5 4. e5").unwrap();
+/// let encoded = encode_pgn(b"1. e4 c5 2. Nf3 e6 3. c3 d5 4. e5").unwrap();
+/// let encoded = encode_pgn(String::from("1. e4 c5 2. Nf3 e6 3. c3 d5 4. e5")).unwrap();
 /// # Ok(())
 /// # }
 /// ```
