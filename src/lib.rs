@@ -207,8 +207,12 @@ pub fn decode_game(bits: &BitVec) -> DecodeResult<(Vec<Move>, Chess)> {
     let mut moves = vec![];
     let mut pos = Chess::default();
     for rank in ranks {
-        let m = ranking::from_position(&pos).remove(rank as usize);
-        pos = pos.play(&m)?;
+        let mut valid_moves = ranking::from_position(&pos);
+        if valid_moves.len() <= rank.into() {
+            return Err(GameDecodeError {});
+        }
+        let m = valid_moves.remove(rank as usize);
+        pos.play_unchecked(&m);
         moves.push(m);
     }
     Ok((moves, pos))
@@ -222,8 +226,12 @@ pub fn decode_move_by_move<T: MoveByMoveDecoder>(
     let ranks = tree.decoder(bits, 256);
     let mut pos = Chess::default();
     for rank in ranks {
-        let m = ranking::from_position(&pos).remove(rank as usize);
-        pos = pos.play(&m)?;
+        let mut valid_moves = ranking::from_position(&pos);
+        if valid_moves.len() <= rank.into() {
+            return Err(GameDecodeError {});
+        }
+        let m = valid_moves.remove(rank as usize);
+        pos.play_unchecked(&m);
         decoder.decoded_move(m, &pos);
     }
     Ok(())
