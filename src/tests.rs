@@ -1,9 +1,8 @@
 use super::*;
 use shakmaty::{Role, Square};
 
-#[test]
-fn encode_decode_consistency() {
-    let moves = vec![
+fn short_game_moves() -> Vec<Move> {
+    vec![
         Move::Normal {
             role: Role::Pawn,
             from: Square::D2,
@@ -39,7 +38,12 @@ fn encode_decode_consistency() {
             capture: None,
             promotion: None,
         },
-    ];
+    ]
+}
+
+#[test]
+fn encode_decode_consistency() {
+    let moves = short_game_moves();
 
     let encoded = encode_game(&moves).unwrap();
     let decoded = decode_game(&encoded).0;
@@ -70,43 +74,7 @@ impl MoveByMoveDecoder for TestDecoder {
 
 #[test]
 fn encode_decode_consistency_move_by_move() {
-    let moves = vec![
-        Move::Normal {
-            role: Role::Pawn,
-            from: Square::D2,
-            to: Square::D4,
-            capture: None,
-            promotion: None,
-        },
-        Move::Normal {
-            role: Role::Pawn,
-            from: Square::E7,
-            to: Square::E5,
-            capture: None,
-            promotion: None,
-        },
-        Move::Normal {
-            role: Role::Pawn,
-            from: Square::D4,
-            to: Square::E5,
-            capture: Some(Role::Pawn),
-            promotion: None,
-        },
-        Move::Normal {
-            role: Role::King,
-            from: Square::E8,
-            to: Square::E7,
-            capture: None,
-            promotion: None,
-        },
-        Move::Normal {
-            role: Role::Queen,
-            from: Square::D1,
-            to: Square::D2,
-            capture: None,
-            promotion: None,
-        },
-    ];
+    let moves = short_game_moves();
 
     let encoded = encode_game(&moves).unwrap();
 
@@ -117,43 +85,7 @@ fn encode_decode_consistency_move_by_move() {
 
 #[test]
 fn encode_decode_consistency_pgn() {
-    let moves = vec![
-        Move::Normal {
-            role: Role::Pawn,
-            from: Square::D2,
-            to: Square::D4,
-            capture: None,
-            promotion: None,
-        },
-        Move::Normal {
-            role: Role::Pawn,
-            from: Square::E7,
-            to: Square::E5,
-            capture: None,
-            promotion: None,
-        },
-        Move::Normal {
-            role: Role::Pawn,
-            from: Square::D4,
-            to: Square::E5,
-            capture: Some(Role::Pawn),
-            promotion: None,
-        },
-        Move::Normal {
-            role: Role::King,
-            from: Square::E8,
-            to: Square::E7,
-            capture: None,
-            promotion: None,
-        },
-        Move::Normal {
-            role: Role::Queen,
-            from: Square::D1,
-            to: Square::D2,
-            capture: None,
-            promotion: None,
-        },
-    ];
+    let moves = short_game_moves();
 
     let encoded = encode_pgn("1. d4 e5 2. dxe5 Ke7 3. Qd2").unwrap();
     let decoded = decode_game(&encoded).0;
