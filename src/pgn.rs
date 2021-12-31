@@ -1,11 +1,11 @@
-use crate::MoveByMoveEncoder;
+use crate::{GameEncodeError, MoveByMoveEncoder};
 use bit_vec::BitVec;
 use pgn_reader::{SanPlus, Skip, Visitor};
 use shakmaty::san::San;
 
 pub struct Encoder {
     mbm: MoveByMoveEncoder,
-    error: Option<Box<dyn std::error::Error>>,
+    error: Option<GameEncodeError>,
 }
 
 impl Encoder {
@@ -16,7 +16,7 @@ impl Encoder {
         }
     }
 
-    fn san_may_error(&mut self, san_plus: SanPlus) -> Result<(), Box<dyn std::error::Error>> {
+    fn san_may_error(&mut self, san_plus: SanPlus) -> Result<(), GameEncodeError> {
         let m = san_plus
             .san
             .to_string()
@@ -34,7 +34,7 @@ impl Default for Encoder {
 }
 
 impl Visitor for Encoder {
-    type Result = std::result::Result<BitVec, Box<dyn std::error::Error>>;
+    type Result = std::result::Result<BitVec, GameEncodeError>;
 
     fn begin_game(&mut self) {
         self.error = None;
