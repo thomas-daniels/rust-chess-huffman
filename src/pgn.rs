@@ -16,6 +16,7 @@ impl Encoder {
         }
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     fn san_may_error(&mut self, san_plus: SanPlus) -> Result<(), GameEncodeError> {
         let m = san_plus
             .san
