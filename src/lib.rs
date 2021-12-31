@@ -86,6 +86,17 @@ pub fn encode_pgn<T: AsRef<str>>(pgn: T) -> Result<BitVec, GameEncodeError> {
     Ok(bits)
 }
 
+pub fn encode_pgn_file<P: AsRef<std::path::Path>>(path: P) -> Result<BitVec, GameEncodeError> {
+    let file = std::fs::File::open(path)?;
+    let mut reader = pgn_reader::BufferedReader::new(file);
+
+    let mut encoder = pgn::Encoder::new();
+    let bits = reader
+        .read_game(&mut encoder)?
+        .unwrap_or_else(|| Ok(BitVec::new()))?;
+    Ok(bits)
+}
+
 pub fn decode_game(bits: &BitVec) -> (Vec<Move>, Chess) {
     let (_, tree) = codes::code_from_lichess_weights();
     let ranks = tree.decoder(bits, 256);
