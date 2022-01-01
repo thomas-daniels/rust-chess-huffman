@@ -317,7 +317,8 @@ pub fn decode_move_by_move<T: MoveByMoveDecoder>(
 /// ```
 pub struct MoveByMoveEncoder {
     book: Book<u8>,
-    pos: Chess,
+    /// The current chess position.
+    pub pos: Chess,
     /// The resulting bit vector.
     pub buffer: BitVec,
 }
