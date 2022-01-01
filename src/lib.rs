@@ -13,7 +13,9 @@ use shakmaty::san::{ParseSanError, SanError};
 use shakmaty::{Chess, Move, PlayError, Position};
 use std::fmt;
 
+/// The result of an encoding operation.
 pub type EncodeResult<T> = Result<T, GameEncodeError>;
+/// The result of a decoding operation.
 pub type DecodeResult<T> = Result<T, GameDecodeError>;
 
 /// Error when encoding a chess game.
@@ -48,10 +50,10 @@ impl fmt::Display for GameEncodeError {
     }
 }
 
+/// Error when decoding an encoded bit vector into a game, because the bit vector is invalid.
 #[derive(Debug)]
 pub struct GameDecodeError {}
 
-/// Error when decoding an encoded bit vector into a game, because the bit vector is invalid.
 impl std::error::Error for GameDecodeError {}
 
 impl fmt::Display for GameDecodeError {
@@ -167,9 +169,9 @@ pub fn encode_game(moves: &[Move]) -> EncodeResult<BitVec> {
 /// # use bit_vec::BitVec;
 /// # use chess_huffman::GameEncodeError;
 /// # fn try_main() -> Result<(), GameEncodeError> {
-/// let encoded = encode_pgn("1. e4 c5 2. Nf3 e6 3. c3 d5 4. e5").unwrap();
-/// let encoded = encode_pgn(b"1. e4 c5 2. Nf3 e6 3. c3 d5 4. e5").unwrap();
-/// let encoded = encode_pgn(String::from("1. e4 c5 2. Nf3 e6 3. c3 d5 4. e5")).unwrap();
+/// let encoded = encode_pgn("1. e4 c5 2. Nf3 e6 3. c3 d5 4. e5")?;
+/// let encoded = encode_pgn(b"1. e4 c5 2. Nf3 e6 3. c3 d5 4. e5")?;
+/// let encoded = encode_pgn(String::from("1. e4 c5 2. Nf3 e6 3. c3 d5 4. e5"))?;
 /// # Ok(())
 /// # }
 /// ```
@@ -203,6 +205,25 @@ pub fn encode_pgn_file<P: AsRef<std::path::Path>>(path: P) -> EncodeResult<BitVe
     Ok(bits)
 }
 
+/// Decodes a bit vector into a game, returning both a vector of all moves
+/// and all positions. The N'th position in the position vector is the
+/// position after the N'th move in the move vector.
+/// 
+/// # Arguments
+/// 
+/// * `bits` - A bit vector of a compressed chess game.
+/// 
+/// # Examples
+///
+/// ```
+/// # use chess_huffman::{encode_pgn, decode_game};
+/// # use bit_vec::BitVec;
+/// # use chess_huffman::GameEncodeError;
+/// # fn try_main() -> Result<(), Box<dyn std::error::Error>> {
+/// let encoded = encode_pgn("1. e4 c5 2. Nf3 e6 3. c3 d5 4. e5")?;
+/// let decoded = decode_game(&encoded)?;
+/// # Ok(())
+/// # }
 pub fn decode_game(bits: &BitVec) -> DecodeResult<(Vec<Move>, Vec<Chess>)> {
     let (_, tree) = codes::code_from_lichess_weights();
     let ranks = tree.decoder(bits, 256);
@@ -221,6 +242,42 @@ pub fn decode_game(bits: &BitVec) -> DecodeResult<(Vec<Move>, Vec<Chess>)> {
     Ok((moves, positions))
 }
 
+/// Decodes a bit vector into a game, calling an implementation of
+/// the `MoveByMoveDecoder` trait for each move. This allows for more
+/// fine-grained processing than `decode_game`.
+/// 
+/// # Arguments
+/// 
+/// * `bits` - A bit vector of a compressed chess game.
+/// * `decoder` - A decoder implementing `MoveByMoveDecoder`.
+/// 
+/// # Examples
+///
+/// ```
+/// # use chess_huffman::{encode_pgn, decode_move_by_move};
+/// # use bit_vec::BitVec;
+/// # use chess_huffman::{GameEncodeError, MoveByMoveDecoder};
+/// use shakmaty::{Chess, Move};
+/// 
+/// struct ExampleDecoder {
+///     capture_count: u8
+/// }
+/// 
+/// impl MoveByMoveDecoder for ExampleDecoder {
+///     fn decoded_move(&mut self, mv: &Move, _position: &Chess) {
+///         if (mv.is_capture()) {
+///             self.capture_count += 1;
+///         }
+///     }
+/// }
+/// 
+/// # fn try_main() -> Result<(), Box<dyn std::error::Error>> {
+/// let encoded = encode_pgn("1. e4 c5 2. Nf3 e6 3. c3 d5 4. exd5")?;
+/// let mut decoder = ExampleDecoder { capture_count: 0 };
+/// decode_move_by_move(&encoded, &mut decoder)?;
+/// assert_eq!(decoder.capture_count, 1);
+/// # Ok(())
+/// # }
 pub fn decode_move_by_move<T: MoveByMoveDecoder>(
     bits: &BitVec,
     decoder: &mut T,
@@ -334,6 +391,41 @@ impl Default for MoveByMoveEncoder {
     }
 }
 
+/// A trait for decoding games move-by-move.
+/// 
+/// # Examples
+///
+/// ```
+/// # use chess_huffman::{encode_pgn, decode_move_by_move};
+/// # use bit_vec::BitVec;
+/// # use chess_huffman::{GameEncodeError, MoveByMoveDecoder};
+/// use shakmaty::{Chess, Move};
+/// 
+/// struct ExampleDecoder {
+///     capture_count: u8
+/// }
+/// 
+/// impl MoveByMoveDecoder for ExampleDecoder {
+///     fn decoded_move(&mut self, mv: &Move, _position: &Chess) {
+///         if (mv.is_capture()) {
+///             self.capture_count += 1;
+///         }
+///     }
+/// }
+/// 
+/// # fn try_main() -> Result<(), Box<dyn std::error::Error>> {
+/// let encoded = encode_pgn("1. e4 c5 2. Nf3 e6 3. c3 d5 4. exd5")?;
+/// let mut decoder = ExampleDecoder { capture_count: 0 };
+/// decode_move_by_move(&encoded, &mut decoder)?;
+/// assert_eq!(decoder.capture_count, 1);
+/// # Ok(())
+/// # }
 pub trait MoveByMoveDecoder {
+    /// Called when a move is decoded.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `mv` - The decoded move.
+    /// * `position` - The chess position after the decoded move has been played.
     fn decoded_move(&mut self, mv: &Move, position: &Chess);
 }
