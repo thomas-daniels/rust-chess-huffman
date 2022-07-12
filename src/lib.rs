@@ -234,7 +234,7 @@ pub fn decode_game(bits: &BitVec) -> DecodeResult<(Vec<Move>, Vec<Chess>)> {
         let valid_moves = ranking::from_position(&pos);
         let m = valid_moves
             .get(rank as usize)
-            .ok_or_else(|| GameDecodeError {})?;
+            .ok_or(GameDecodeError {})?;
         pos.play_unchecked(m);
         moves.push(m.clone());
         positions.push(pos.clone());
@@ -289,7 +289,7 @@ pub fn decode_move_by_move<T: MoveByMoveDecoder>(
         let valid_moves = ranking::from_position(&pos);
         let m = valid_moves
             .get(rank as usize)
-            .ok_or_else(|| GameDecodeError {})?;
+            .ok_or(GameDecodeError {})?;
         pos.play_unchecked(m);
         decoder.decoded_move(m, &pos);
     }
