@@ -1,10 +1,14 @@
 [package]
 name = "chess-huffman"
 version = "0.1.0"
-authors = ["Thomas Daniels"]
+authors = ["Thomas Daniels <daniels.thomas@pm.me>"]
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "GPL-3.0+"
+keywords = ["huffman", "compression", "decompression", "chess"]
+readme = "README.md"
+repository = "https://github.com/thomas-daniels/rust-chess-huffman"
+categories = ["compression", "encoding", "algorithms", "games"]
+description = "Compresses chess games using Huffman coding"
 
 [dependencies]
 huffman-compress = "0.6.1"
