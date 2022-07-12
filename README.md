@@ -1,3 +1,6 @@
+[![crates.io](https://img.shields.io/crates/v/chess-huffman.svg)](https://crates.io/crates/chess-huffman)
+[![docs.rs](https://docs.rs/chess-huffman/badge.svg)](https://docs.rs/chess-huffman)
+
 # chess-huffman
 
 A Rust crate for [Huffman compression](https://en.wikipedia.org/wiki/Huffman_coding) of chess games. Builds upon [Niklas Fiekas](https://github.com/niklasf)'s crates [`shakmaty`](https://crates.io/crates/shakmaty), [`huffman-compress`](https://crates.io/crates/huffman-compress) and [`pgn-reader`](https://crates.io/crates/pgn-reader), and his [blog post on the topic](https://lichess.org/blog/Wqa7GiAAAOIpBLoY/developer-update-275-improved-game-compression) and [Java implementation](https://github.com/lichess-org/compression/tree/master/src/main/java/game).
