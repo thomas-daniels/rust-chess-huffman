@@ -112,7 +112,7 @@ impl From<PlayError<Chess>> for GameDecodeError {
 ///
 /// # Errors
 ///
-/// Will return `Err` if the given sequence of moves is invalid.
+/// [`GameEncodeError`] if the given sequence of moves is invalid.
 ///
 /// # Examples
 ///
@@ -160,7 +160,7 @@ pub fn encode_game(moves: &[Move]) -> EncodeResult<BitVec> {
 ///
 /// # Errors
 ///
-/// Will return `Err` if the PGN is invalid.
+/// [`GameEncodeError`] if the PGN is invalid.
 ///
 /// # Examples
 ///
@@ -193,7 +193,8 @@ pub fn encode_pgn<T: AsRef<[u8]>>(pgn: T) -> EncodeResult<BitVec> {
 ///
 /// # Errors
 ///
-/// Will return `Err` if the file could not be read or if the PGN is invalid.
+/// [`GameEncodeError`] if the file could not be read or if the PGN is invalid,
+/// its `kind` attribute tells more about the error reason.
 pub fn encode_pgn_file<P: AsRef<std::path::Path>>(path: P) -> EncodeResult<BitVec> {
     let file = std::fs::File::open(path)?;
     let mut reader = pgn_reader::BufferedReader::new(file);
@@ -212,6 +213,10 @@ pub fn encode_pgn_file<P: AsRef<std::path::Path>>(path: P) -> EncodeResult<BitVe
 /// # Arguments
 /// 
 /// * `bits` - A bit vector of a compressed chess game.
+/// 
+/// # Errors
+/// 
+/// [`GameDecodeError`] if the game contains invalid moves.
 /// 
 /// # Examples
 ///
@@ -243,13 +248,17 @@ pub fn decode_game(bits: &BitVec) -> DecodeResult<(Vec<Move>, Vec<Chess>)> {
 }
 
 /// Decodes a bit vector into a game, calling an implementation of
-/// the `MoveByMoveDecoder` trait for each move. This allows for more
-/// fine-grained processing than `decode_game`.
+/// the [`MoveByMoveDecoder`] trait for each move. This allows for more
+/// fine-grained processing than [`decode_game`].
 /// 
 /// # Arguments
 /// 
 /// * `bits` - A bit vector of a compressed chess game.
-/// * `decoder` - A decoder implementing `MoveByMoveDecoder`.
+/// * `decoder` - A decoder implementing [`MoveByMoveDecoder`].
+/// 
+/// # Errors
+/// 
+/// [`GameDecodeError`] if the game contains invalid moves.
 /// 
 /// # Examples
 ///
@@ -324,7 +333,7 @@ pub struct MoveByMoveEncoder {
 }
 
 impl MoveByMoveEncoder {
-    /// Constructs a new `MoveByMoveEncoder`.
+    /// Constructs a new [`MoveByMoveEncoder`].
     #[must_use]
     pub fn new() -> Self {
         let (book, _) = codes::code_from_lichess_weights();
@@ -336,6 +345,11 @@ impl MoveByMoveEncoder {
     }
 
     /// Adds a new move to the encoder. This affects the value of `buffer`.
+    ///
+    /// # Errors
+    ///
+    /// [`GameEncodeError`] if the move is invalid or `pos` is an invalid chess position.
+    ///
     /// # Examples
     ///
     /// ```
@@ -393,7 +407,7 @@ impl Default for MoveByMoveEncoder {
 }
 
 /// A trait for decoding games move-by-move.
-/// 
+///
 /// # Examples
 ///
 /// ```
@@ -423,9 +437,9 @@ impl Default for MoveByMoveEncoder {
 /// # }
 pub trait MoveByMoveDecoder {
     /// Called when a move is decoded.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `mv` - The decoded move.
     /// * `position` - The chess position after the decoded move has been played.
     fn decoded_move(&mut self, mv: &Move, position: &Chess);
