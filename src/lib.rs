@@ -209,15 +209,15 @@ pub fn encode_pgn_file<P: AsRef<std::path::Path>>(path: P) -> EncodeResult<BitVe
 /// Decodes a bit vector into a game, returning both a vector of all moves
 /// and all positions. The N'th position in the position vector is the
 /// position after the N'th move in the move vector.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `bits` - A bit vector of a compressed chess game.
-/// 
+///
 /// # Errors
-/// 
+///
 /// [`GameDecodeError`] if the game contains invalid moves.
-/// 
+///
 /// # Examples
 ///
 /// ```
@@ -237,9 +237,7 @@ pub fn decode_game(bits: &BitVec) -> DecodeResult<(Vec<Move>, Vec<Chess>)> {
     let mut positions = vec![];
     for rank in ranks {
         let valid_moves = ranking::from_position(&pos);
-        let m = valid_moves
-            .get(rank as usize)
-            .ok_or(GameDecodeError {})?;
+        let m = valid_moves.get(rank as usize).ok_or(GameDecodeError {})?;
         pos.play_unchecked(m);
         moves.push(m.clone());
         positions.push(pos.clone());
@@ -250,16 +248,16 @@ pub fn decode_game(bits: &BitVec) -> DecodeResult<(Vec<Move>, Vec<Chess>)> {
 /// Decodes a bit vector into a game, calling an implementation of
 /// the [`MoveByMoveDecoder`] trait for each move. This allows for more
 /// fine-grained processing than [`decode_game`].
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `bits` - A bit vector of a compressed chess game.
 /// * `decoder` - A decoder implementing [`MoveByMoveDecoder`].
-/// 
+///
 /// # Errors
-/// 
+///
 /// [`GameDecodeError`] if the game contains invalid moves.
-/// 
+///
 /// # Examples
 ///
 /// ```
@@ -267,19 +265,21 @@ pub fn decode_game(bits: &BitVec) -> DecodeResult<(Vec<Move>, Vec<Chess>)> {
 /// # use bit_vec::BitVec;
 /// # use chess_huffman::{GameEncodeError, MoveByMoveDecoder};
 /// use shakmaty::{Chess, Move};
-/// 
+///
 /// struct ExampleDecoder {
 ///     capture_count: u8
 /// }
-/// 
+///
 /// impl MoveByMoveDecoder for ExampleDecoder {
-///     fn decoded_move(&mut self, mv: &Move, _position: &Chess) {
+///     fn decoded_move(&mut self, mv: &Move, _position: &Chess) -> bool {
 ///         if (mv.is_capture()) {
 ///             self.capture_count += 1;
 ///         }
+///
+///         true
 ///     }
 /// }
-/// 
+///
 /// # fn try_main() -> Result<(), Box<dyn std::error::Error>> {
 /// let encoded = encode_pgn("1. e4 c5 2. Nf3 e6 3. c3 d5 4. exd5")?;
 /// let mut decoder = ExampleDecoder { capture_count: 0 };
@@ -296,11 +296,12 @@ pub fn decode_move_by_move<T: MoveByMoveDecoder>(
     let mut pos = Chess::default();
     for rank in ranks {
         let valid_moves = ranking::from_position(&pos);
-        let m = valid_moves
-            .get(rank as usize)
-            .ok_or(GameDecodeError {})?;
+        let m = valid_moves.get(rank as usize).ok_or(GameDecodeError {})?;
         pos.play_unchecked(m);
-        decoder.decoded_move(m, &pos);
+        let cont = decoder.decoded_move(m, &pos);
+        if !cont {
+            break;
+        }
     }
     Ok(())
 }
@@ -415,19 +416,21 @@ impl Default for MoveByMoveEncoder {
 /// # use bit_vec::BitVec;
 /// # use chess_huffman::{GameEncodeError, MoveByMoveDecoder};
 /// use shakmaty::{Chess, Move};
-/// 
+///
 /// struct ExampleDecoder {
 ///     capture_count: u8
 /// }
-/// 
+///
 /// impl MoveByMoveDecoder for ExampleDecoder {
-///     fn decoded_move(&mut self, mv: &Move, _position: &Chess) {
+///     fn decoded_move(&mut self, mv: &Move, _position: &Chess) -> bool {
 ///         if (mv.is_capture()) {
 ///             self.capture_count += 1;
 ///         }
+///
+///         true
 ///     }
 /// }
-/// 
+///
 /// # fn try_main() -> Result<(), Box<dyn std::error::Error>> {
 /// let encoded = encode_pgn("1. e4 c5 2. Nf3 e6 3. c3 d5 4. exd5")?;
 /// let mut decoder = ExampleDecoder { capture_count: 0 };
@@ -438,9 +441,12 @@ impl Default for MoveByMoveEncoder {
 pub trait MoveByMoveDecoder {
     /// Called when a move is decoded.
     ///
+    /// The returned boolean signals whether decoding the rest of the game should continue.
+    /// Return `false` to stop the decoding process early.
+    ///
     /// # Arguments
     ///
     /// * `mv` - The decoded move.
     /// * `position` - The chess position after the decoded move has been played.
-    fn decoded_move(&mut self, mv: &Move, position: &Chess);
+    fn decoded_move(&mut self, mv: &Move, position: &Chess) -> bool;
 }
