@@ -394,10 +394,10 @@ impl MoveByMoveEncoder {
         Ok(())
     }
 
-    /// Clears the encoder: restores the game state to the start position and clears `buffer`.
+    /// Clears the encoder: restores the game state to the start position and empties `buffer`.
     pub fn clear(&mut self) {
         self.pos = Chess::default();
-        self.buffer.clear();
+        self.buffer.truncate(0);
     }
 }
 

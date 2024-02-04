@@ -117,3 +117,19 @@ fn decoder_early_stop() {
     assert_eq!(decoder.moves.len(), 3);
     assert_eq!(decoder.moves, moves[..3]);
 }
+
+#[test]
+fn encode_move_by_move() {
+    let moves = short_game_moves();
+
+    let mut mbm = MoveByMoveEncoder::new();
+    for m in &moves {
+        mbm.add_move(&m).unwrap();
+    }
+
+    let decoded = decode_game(&mbm.buffer).unwrap().0;
+    assert_eq!(decoded, moves);
+
+    mbm.clear();
+    assert_eq!(mbm.buffer.len(), 0);
+}
