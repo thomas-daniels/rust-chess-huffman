@@ -1,6 +1,6 @@
 [package]
 name = "chess-huffman"
-version = "0.3.1"
+version = "0.4.0"
 authors = ["Thomas Daniels <daniels.thomas@pm.me>"]
 edition = "2021"
 license = "GPL-3.0+"
@@ -12,6 +12,6 @@ description = "Compresses chess games using Huffman coding"
 
 [dependencies]
 huffman-compress = "0.6.1"
-shakmaty = "0.26"
+shakmaty = "0.27"
 bit-vec = "0.6"
-pgn-reader = "0.25"
+pgn-reader = "0.26"
