@@ -1,4 +1,4 @@
-use huffman_compress::{Book, CodeBuilder, Tree};
+use huffman_compress2::{Book, CodeBuilder, Tree};
 use std::collections::HashMap;
 use std::iter::FromIterator;
 

@@ -8,7 +8,7 @@ mod ranking;
 mod tests;
 
 use bit_vec::BitVec;
-use huffman_compress::Book;
+use huffman_compress2::Book;
 use shakmaty::san::{ParseSanError, SanError};
 use shakmaty::{Chess, Move, PlayError, Position};
 use std::fmt;
@@ -62,8 +62,8 @@ impl fmt::Display for GameDecodeError {
     }
 }
 
-impl From<huffman_compress::EncodeError> for GameEncodeError {
-    fn from(inner: huffman_compress::EncodeError) -> Self {
+impl From<huffman_compress2::EncodeError> for GameEncodeError {
+    fn from(inner: huffman_compress2::EncodeError) -> Self {
         Self {
             kind: GameEncodeErrorKind::HuffmanEncodeError,
             explanation: format!("Error during Huffman encoding: {}", inner),
