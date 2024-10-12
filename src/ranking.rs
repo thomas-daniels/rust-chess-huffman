@@ -4,7 +4,25 @@ use shakmaty::{Chess, Color, Move, Piece, Position, Role, Square};
 type Score = i32;
 
 pub fn move_rank(pos: &Chess, m: &Move) -> Option<usize> {
-    from_position(pos).iter().position(|x| x == m)
+    let legals = pos.legal_moves();
+    let mut counter = 0;
+    let score = move_score(pos, m);
+    let mut is_legal = false;
+    for lm in legals {
+        if m != &lm {
+            if score < move_score(pos, &lm) {
+                counter += 1;
+            }
+        } else {
+            is_legal = true;
+        }
+    }
+
+    if is_legal {
+        Some(counter)
+    } else {
+        None
+    }
 }
 
 pub fn from_position(pos: &Chess) -> Vec<Move> {
