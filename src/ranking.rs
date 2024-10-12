@@ -9,7 +9,7 @@ pub fn move_rank(pos: &Chess, m: &Move) -> Option<usize> {
     let score = move_score(pos, m);
     let mut is_legal = false;
     for lm in legals {
-        if m != &lm {
+        if is_legal || m != &lm {
             if score < move_score(pos, &lm) {
                 counter += 1;
             }
