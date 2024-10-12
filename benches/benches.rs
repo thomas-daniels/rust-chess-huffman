@@ -1,9 +1,8 @@
-use chess_huffman::encode_pgn;
+use chess_huffman::{decode_game, encode_pgn};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use shakmaty::Square;
 
-fn bench_encode_pgn(c: &mut Criterion) {
-    let pgn = black_box(
-        "1. e4 c5 2. c3 d5 3. exd5 Nf6 4. Bb5+ Bd7 5. Bxd7+ Qxd7 
+static PGN: &'static str = "1. e4 c5 2. c3 d5 3. exd5 Nf6 4. Bb5+ Bd7 5. Bxd7+ Qxd7 
     6. d4 cxd4 7. Qxd4 Qxd5 8. Nf3 Nc6 9. Qxd5 Nxd5 10. O-O e5 11. Re1 f6 
     12. Nbd2 Kf7 13. Nb3 Be7 14. Nfd2 Rhd8 15. Ne4 b6 16. g3 Rac8 17. a4 h6 
     18. a5 f5 19. Ned2 b5 20. Nf3 Bf6 21. a6 e4 22. Nfd2 b4 23. c4 Nb6 24. f3 Ne5 
@@ -15,8 +14,10 @@ fn bench_encode_pgn(c: &mut Criterion) {
     55. g4 Re1 56. Rd8 Re3 57. Kf2 Rg3 58. Rg8 Ke5 59. Re8+ Kd4 60. Rd8+ Ke4 
     61. Rg8 Kd4 62. g5 Ke4 63. g6 Rf3+ 64. Kg2 Re3 65. Kh2 Kf5 66. h5 Kg4 
     67. Rf8 Re2+ 68. Kg1 Re3 69. Kf1 Kf3 70. Kg1 Re2 71. Kf1 Rf2+ 72. Ke1 Re2+ 
-    73. Kd1 Rg2 74. Kc1 Rf2 75. Kb1 Rf1+ 76. Kb2 Rf2+ 77. Kb3 Re2 0-1",
-    );
+    73. Kd1 Rg2 74. Kc1 Rf2 75. Kb1 Rf1+ 76. Kb2 Rf2+ 77. Kb3 Re2 0-1";
+
+fn bench_encode_pgn(c: &mut Criterion) {
+    let pgn = black_box(PGN);
 
     c.bench_function("encode-pgn", |b| {
         b.iter(|| {
@@ -27,6 +28,19 @@ fn bench_encode_pgn(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, bench_encode_pgn);
+fn bench_decode(c: &mut Criterion) {
+    let bits = encode_pgn(black_box(PGN)).unwrap();
+
+    c.bench_function("decode", |b| {
+        b.iter(|| {
+            let (moves, positions) = decode_game(&bits).unwrap();
+
+            assert_eq!(moves.len(), positions.len());
+            assert_eq!(moves.last().unwrap().to(), Square::E2);
+        })
+    });
+}
+
+criterion_group!(benches, bench_encode_pgn, bench_decode);
 
 criterion_main!(benches);
