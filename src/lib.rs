@@ -230,7 +230,7 @@ pub fn encode_pgn_file<P: AsRef<std::path::Path>>(path: P) -> EncodeResult<BitVe
 /// # Ok(())
 /// # }
 pub fn decode_game(bits: &BitVec) -> DecodeResult<(Vec<Move>, Vec<Chess>)> {
-    let (_, tree) = codes::code_from_lichess_weights();
+    let (_, tree) = &*codes::CODE_FROM_LICHESS_WEIGHTS;
     let ranks = tree.unbounded_decoder(bits);
     let mut moves = vec![];
     let mut pos = Chess::default();
@@ -291,7 +291,7 @@ pub fn decode_move_by_move<T: MoveByMoveDecoder>(
     bits: &BitVec,
     decoder: &mut T,
 ) -> DecodeResult<()> {
-    let (_, tree) = codes::code_from_lichess_weights();
+    let (_, tree) = &*codes::CODE_FROM_LICHESS_WEIGHTS;
     let ranks = tree.unbounded_decoder(bits);
     let mut pos = Chess::default();
     for rank in ranks {
@@ -325,19 +325,19 @@ pub fn decode_move_by_move<T: MoveByMoveDecoder>(
 /// # Ok(())
 /// # }
 /// ```
-pub struct MoveByMoveEncoder {
-    book: Book<u8>,
+pub struct MoveByMoveEncoder<'a> {
+    book: &'a Book<u8>,
     /// The current chess position.
     pub pos: Chess,
     /// The resulting bit vector.
     pub buffer: BitVec,
 }
 
-impl MoveByMoveEncoder {
+impl MoveByMoveEncoder<'_> {
     /// Constructs a new [`MoveByMoveEncoder`].
     #[must_use]
     pub fn new() -> Self {
-        let (book, _) = codes::code_from_lichess_weights();
+        let (book, _) = &*codes::CODE_FROM_LICHESS_WEIGHTS;
         Self {
             book,
             pos: Chess::default(),
@@ -401,7 +401,7 @@ impl MoveByMoveEncoder {
     }
 }
 
-impl Default for MoveByMoveEncoder {
+impl Default for MoveByMoveEncoder<'_> {
     fn default() -> Self {
         Self::new()
     }

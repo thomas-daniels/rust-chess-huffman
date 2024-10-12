@@ -1,11 +1,12 @@
 use huffman_compress2::{Book, CodeBuilder, Tree};
 use std::collections::HashMap;
 use std::iter::FromIterator;
+use std::sync::LazyLock;
 
 // Huffman weights from:
 // https://github.com/lichess-org/compression/blob/master/src/main/java/game/Huffman.java#L64
 #[allow(clippy::too_many_lines)]
-pub fn code_from_lichess_weights() -> (Book<u8>, Tree<u8>) {
+pub static CODE_FROM_LICHESS_WEIGHTS: LazyLock<(Book<u8>, Tree<u8>)> = LazyLock::new(|| {
     let mut weights: HashMap<u8, u32> = HashMap::new();
     weights.insert(0, 225_883_932);
     weights.insert(1, 134_956_126);
@@ -264,4 +265,4 @@ pub fn code_from_lichess_weights() -> (Book<u8>, Tree<u8>) {
     weights.insert(254, 0);
     weights.insert(255, 0);
     CodeBuilder::from_iter(weights).finish()
-}
+});

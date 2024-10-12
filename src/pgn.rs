@@ -3,12 +3,12 @@ use bit_vec::BitVec;
 use pgn_reader::{SanPlus, Skip, Visitor};
 use shakmaty::san::San;
 
-pub struct Encoder {
-    mbm: MoveByMoveEncoder,
+pub struct Encoder<'a> {
+    mbm: MoveByMoveEncoder<'a>,
     error: Option<GameEncodeError>,
 }
 
-impl Encoder {
+impl Encoder<'_> {
     pub fn new() -> Self {
         Self {
             mbm: MoveByMoveEncoder::new(),
@@ -28,13 +28,13 @@ impl Encoder {
     }
 }
 
-impl Default for Encoder {
+impl Default for Encoder<'_> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Visitor for Encoder {
+impl Visitor for Encoder<'_> {
     type Result = std::result::Result<BitVec, GameEncodeError>;
 
     fn begin_game(&mut self) {
