@@ -236,11 +236,16 @@ pub fn decode_game(bits: &BitVec) -> DecodeResult<(Vec<Move>, Vec<Chess>)> {
     let mut pos = Chess::default();
     let mut positions = vec![];
     for rank in ranks {
-        let valid_moves = ranking::from_position(&pos);
-        let m = valid_moves.get(rank as usize).ok_or(GameDecodeError {})?;
-        pos.play_unchecked(m);
-        moves.push(m.clone());
-        positions.push(pos.clone());
+        let mut valid_moves = ranking::from_position(&pos);
+        let index = rank as usize;
+        if valid_moves.len() > index {
+            let m = valid_moves.swap_remove(index);
+            pos.play_unchecked(&m);
+            moves.push(m);
+            positions.push(pos.clone());
+        } else {
+            return Err(GameDecodeError {});
+        }
     }
     Ok((moves, positions))
 }
@@ -271,7 +276,7 @@ pub fn decode_game(bits: &BitVec) -> DecodeResult<(Vec<Move>, Vec<Chess>)> {
 /// }
 ///
 /// impl MoveByMoveDecoder for ExampleDecoder {
-///     fn decoded_move(&mut self, mv: &Move, _position: &Chess) -> bool {
+///     fn decoded_move(&mut self, mv: Move, _position: &Chess) -> bool {
 ///         if (mv.is_capture()) {
 ///             self.capture_count += 1;
 ///         }
@@ -295,12 +300,17 @@ pub fn decode_move_by_move<T: MoveByMoveDecoder>(
     let ranks = tree.unbounded_decoder(bits);
     let mut pos = Chess::default();
     for rank in ranks {
-        let valid_moves = ranking::from_position(&pos);
-        let m = valid_moves.get(rank as usize).ok_or(GameDecodeError {})?;
-        pos.play_unchecked(m);
-        let cont = decoder.decoded_move(m, &pos);
-        if !cont {
-            break;
+        let mut valid_moves = ranking::from_position(&pos);
+        let index = rank as usize;
+        if valid_moves.len() > index {
+            let m = valid_moves.swap_remove(index);
+            pos.play_unchecked(&m);
+            let cont = decoder.decoded_move(m, &pos);
+            if !cont {
+                break;
+            }
+        } else {
+            return Err(GameDecodeError {});
         }
     }
     Ok(())
@@ -422,7 +432,7 @@ impl Default for MoveByMoveEncoder<'_> {
 /// }
 ///
 /// impl MoveByMoveDecoder for ExampleDecoder {
-///     fn decoded_move(&mut self, mv: &Move, _position: &Chess) -> bool {
+///     fn decoded_move(&mut self, mv: Move, _position: &Chess) -> bool {
 ///         if (mv.is_capture()) {
 ///             self.capture_count += 1;
 ///         }
@@ -448,5 +458,5 @@ pub trait MoveByMoveDecoder {
     ///
     /// * `mv` - The decoded move.
     /// * `position` - The chess position after the decoded move has been played.
-    fn decoded_move(&mut self, mv: &Move, position: &Chess) -> bool;
+    fn decoded_move(&mut self, mv: Move, position: &Chess) -> bool;
 }

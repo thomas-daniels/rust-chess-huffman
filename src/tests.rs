@@ -67,8 +67,8 @@ struct TestDecoder {
 }
 
 impl MoveByMoveDecoder for TestDecoder {
-    fn decoded_move(&mut self, mv: &Move, _position: &Chess) -> bool {
-        self.moves.push(mv.clone());
+    fn decoded_move(&mut self, mv: Move, _position: &Chess) -> bool {
+        self.moves.push(mv);
 
         true
     }
@@ -99,8 +99,8 @@ struct TestDecoderEarlyStop {
 }
 
 impl MoveByMoveDecoder for TestDecoderEarlyStop {
-    fn decoded_move(&mut self, mv: &Move, _position: &Chess) -> bool {
-        self.moves.push(mv.clone());
+    fn decoded_move(&mut self, mv: Move, _position: &Chess) -> bool {
+        self.moves.push(mv);
 
         self.moves.len() < 3
     }
