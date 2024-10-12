@@ -25,10 +25,14 @@ pub fn move_rank(pos: &Chess, m: &Move) -> Option<usize> {
     }
 }
 
-pub fn from_position(pos: &Chess) -> Vec<Move> {
+pub fn nth_from_position(n: usize, pos: &Chess) -> Option<Move> {
     let mut legals = pos.legal_moves();
-    legals.sort_unstable_by_key(|m| -move_score(pos, m));
-    legals.to_vec()
+    if legals.len() > n {
+        let (_, m, _) = legals.select_nth_unstable_by_key(n, |m| -move_score(pos, m));
+        Some(m.clone())
+    } else {
+        None
+    }
 }
 
 fn move_score(pos: &Chess, m: &Move) -> Score {
@@ -143,11 +147,10 @@ mod tests {
 
     #[test]
     fn test_e4_highest_score() {
-        let from_starting_position = from_position(&Chess::default());
-        let highest_choice = &from_starting_position[0];
+        let highest_choice = nth_from_position(0, &Chess::default()).unwrap();
         assert_eq!(
             highest_choice,
-            &Move::Normal {
+            Move::Normal {
                 role: Role::Pawn,
                 from: Square::E2,
                 to: Square::E4,
