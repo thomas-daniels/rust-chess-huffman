@@ -66,7 +66,7 @@ impl From<huffman_compress2::EncodeError> for GameEncodeError {
     fn from(inner: huffman_compress2::EncodeError) -> Self {
         Self {
             kind: GameEncodeErrorKind::HuffmanEncodeError,
-            explanation: format!("Error during Huffman encoding: {}", inner),
+            explanation: format!("Error during Huffman encoding: {inner}"),
         }
     }
 }
@@ -75,7 +75,7 @@ impl From<std::io::Error> for GameEncodeError {
     fn from(inner: std::io::Error) -> Self {
         Self {
             kind: GameEncodeErrorKind::IoError,
-            explanation: format!("I/O Error: {}", inner),
+            explanation: format!("I/O Error: {inner}"),
         }
     }
 }
@@ -84,7 +84,7 @@ impl From<SanError> for GameEncodeError {
     fn from(inner: SanError) -> Self {
         Self {
             kind: GameEncodeErrorKind::SanError,
-            explanation: format!("Illegal or ambiguous SAN: {}", inner),
+            explanation: format!("Illegal or ambiguous SAN: {inner}"),
         }
     }
 }
@@ -93,7 +93,7 @@ impl From<ParseSanError> for GameEncodeError {
     fn from(inner: ParseSanError) -> Self {
         Self {
             kind: GameEncodeErrorKind::SanError,
-            explanation: format!("Unable to parse SAN: {}", inner),
+            explanation: format!("Unable to parse SAN: {inner}"),
         }
     }
 }
@@ -386,7 +386,7 @@ impl MoveByMoveEncoder<'_> {
             None => {
                 return Err(GameEncodeError {
                     kind: GameEncodeErrorKind::IllegalMove,
-                    explanation: format!("Illegal move {}", m),
+                    explanation: format!("Illegal move {m}"),
                 })
             }
         }
