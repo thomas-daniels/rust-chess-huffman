@@ -18,6 +18,8 @@ pgn-reader = "0.26"
 
 [dev-dependencies]
 criterion = "0.5"
+quickcheck = "1"
+quickcheck_macros = "1"
 
 [[bench]]
 name = "benches"

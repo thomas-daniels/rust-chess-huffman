@@ -1,4 +1,5 @@
 use super::*;
+use quickcheck_macros::quickcheck;
 use shakmaty::{Role, Square};
 
 fn short_game_moves() -> Vec<Move> {
@@ -64,11 +65,13 @@ fn expected_error() {
 
 struct TestDecoder {
     moves: Vec<Move>,
+    positions: Vec<Chess>,
 }
 
 impl MoveByMoveDecoder for TestDecoder {
-    fn decoded_move(&mut self, mv: Move, _position: &Chess) -> bool {
+    fn decoded_move(&mut self, mv: Move, position: &Chess) -> bool {
         self.moves.push(mv);
+        self.positions.push(position.clone());
 
         true
     }
@@ -80,7 +83,10 @@ fn encode_decode_consistency_move_by_move() {
 
     let encoded = encode_game(&moves).unwrap();
 
-    let mut decoder = TestDecoder { moves: vec![] };
+    let mut decoder = TestDecoder {
+        moves: vec![],
+        positions: vec![],
+    };
     decode_move_by_move(&encoded, &mut decoder).unwrap();
     assert_eq!(decoder.moves, moves);
 }
@@ -132,4 +138,42 @@ fn encode_move_by_move() {
 
     mbm.clear();
     assert_eq!(mbm.buffer.len(), 0);
+}
+
+#[quickcheck]
+fn random_games_consistency(move_ids: Vec<u8>) -> bool {
+    let mut pos = Chess::default();
+    let mut moves: Vec<Move> = vec![];
+    let mut positions: Vec<Chess> = vec![];
+    let mut encoder = MoveByMoveEncoder::new();
+    for m in move_ids {
+        let legal_moves = pos.legal_moves();
+        if legal_moves.is_empty() {
+            break;
+        }
+        let i = m as usize % legal_moves.len();
+        let choice = legal_moves[i].clone();
+        pos.play_unchecked(&choice);
+        encoder.add_move(&choice).unwrap();
+        moves.push(choice);
+        positions.push(pos.clone());
+    }
+
+    let bits = encoder.buffer;
+    let bits2 = encode_game(&moves).unwrap();
+    let (decoded_moves, decoded_positions) = decode_game(&bits).unwrap();
+
+    let mut decoder = TestDecoder {
+        moves: vec![],
+        positions: vec![],
+    };
+    decode_move_by_move(&bits, &mut decoder).unwrap();
+
+    bits.len() >= moves.len()
+        && bits == bits2
+        && moves == decoded_moves
+        && positions == decoded_positions
+        && decoded_moves.len() == decoded_positions.len()
+        && moves == decoder.moves
+        && positions == decoder.positions
 }
