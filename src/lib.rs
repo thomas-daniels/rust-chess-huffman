@@ -8,7 +8,8 @@ mod ranking;
 mod tests;
 
 use bit_vec::BitVec;
-use huffman_compress2::Book;
+use codes::Book;
+use minimum_redundancy::DecodingResult;
 use shakmaty::san::{ParseSanError, SanError};
 use shakmaty::{Chess, Move, PlayError, Position};
 use std::fmt;
@@ -59,15 +60,6 @@ impl std::error::Error for GameDecodeError {}
 impl fmt::Display for GameDecodeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Cannot decode invalid bit vector")
-    }
-}
-
-impl From<huffman_compress2::EncodeError> for GameEncodeError {
-    fn from(inner: huffman_compress2::EncodeError) -> Self {
-        Self {
-            kind: GameEncodeErrorKind::HuffmanEncodeError,
-            explanation: format!("Error during Huffman encoding: {inner}"),
-        }
     }
 }
 
@@ -230,16 +222,35 @@ pub fn encode_pgn_file<P: AsRef<std::path::Path>>(path: P) -> EncodeResult<BitVe
 /// # Ok(())
 /// # }
 pub fn decode_game(bits: &BitVec) -> DecodeResult<(Vec<Move>, Vec<Chess>)> {
-    let (_, tree) = &*codes::CODE_FROM_LICHESS_WEIGHTS;
-    let ranks = tree.unbounded_decoder(bits);
+    let mut decoder = codes::get_decoder();
+
     let mut moves = vec![];
     let mut pos = Chess::default();
     let mut positions = vec![];
-    for rank in ranks {
-        let m = ranking::nth_from_position(rank as usize, &pos).ok_or(GameDecodeError {})?;
-        pos.play_unchecked(&m);
-        moves.push(m);
-        positions.push(pos.clone());
+
+    let mut iter = bits.iter();
+
+    loop {
+        match decoder.decode_next(&mut iter) {
+            DecodingResult::Value(rank) => {
+                let m =
+                    ranking::nth_from_position(*rank as usize, &pos).ok_or(GameDecodeError {})?;
+                pos.play_unchecked(&m);
+                moves.push(m);
+                positions.push(pos.clone());
+            }
+            DecodingResult::Invalid => {
+                return Err(GameDecodeError {});
+                // this shouldn't happen though: according to minimum_redundancy's docs, Invalid can only be returned if the bits per fragment > 1
+            }
+            DecodingResult::Incomplete => {
+                if decoder.consumed_fragments() == 0 {
+                    break;
+                } else {
+                    return Err(GameDecodeError {});
+                }
+            }
+        }
     }
     Ok((moves, positions))
 }
@@ -290,15 +301,33 @@ pub fn decode_move_by_move<T: MoveByMoveDecoder>(
     bits: &BitVec,
     decoder: &mut T,
 ) -> DecodeResult<()> {
-    let (_, tree) = &*codes::CODE_FROM_LICHESS_WEIGHTS;
-    let ranks = tree.unbounded_decoder(bits);
+    let mut huff_decoder = codes::get_decoder();
+
+    let mut iter = bits.iter();
+
     let mut pos = Chess::default();
-    for rank in ranks {
-        let m = ranking::nth_from_position(rank as usize, &pos).ok_or(GameDecodeError {})?;
-        pos.play_unchecked(&m);
-        let cont = decoder.decoded_move(m, &pos);
-        if !cont {
-            break;
+    loop {
+        match huff_decoder.decode_next(&mut iter) {
+            DecodingResult::Value(rank) => {
+                let m =
+                    ranking::nth_from_position(*rank as usize, &pos).ok_or(GameDecodeError {})?;
+                pos.play_unchecked(&m);
+                let cont = decoder.decoded_move(m, &pos);
+                if !cont {
+                    break;
+                }
+            }
+            DecodingResult::Invalid => {
+                return Err(GameDecodeError {});
+                // this shouldn't happen though: according to minimum_redundancy's docs, Invalid can only be returned if the bits per fragment > 1
+            }
+            DecodingResult::Incomplete => {
+                if huff_decoder.consumed_fragments() == 0 {
+                    break;
+                } else {
+                    return Err(GameDecodeError {});
+                }
+            }
         }
     }
     Ok(())
@@ -324,7 +353,7 @@ pub fn decode_move_by_move<T: MoveByMoveDecoder>(
 /// # }
 /// ```
 pub struct MoveByMoveEncoder<'a> {
-    book: &'a Book<u8>,
+    book: &'a Book,
     /// The current chess position.
     pub pos: Chess,
     /// The resulting bit vector.
@@ -335,7 +364,7 @@ impl MoveByMoveEncoder<'_> {
     /// Constructs a new [`MoveByMoveEncoder`].
     #[must_use]
     pub fn new() -> Self {
-        let (book, _) = &*codes::CODE_FROM_LICHESS_WEIGHTS;
+        let book = &*codes::BOOK_FROM_LICHESS_WEIGHTS;
         Self {
             book,
             pos: Chess::default(),
@@ -378,7 +407,7 @@ impl MoveByMoveEncoder<'_> {
                     });
                 }
                 #[allow(clippy::cast_possible_truncation)]
-                self.book.encode(&mut self.buffer, &(rank as u8))?;
+                self.book.encode(&mut self.buffer, rank as u8);
                 self.pos.play_unchecked(m);
             }
             None => {

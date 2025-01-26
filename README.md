@@ -3,7 +3,7 @@
 
 # chess-huffman
 
-A Rust crate for [Huffman compression](https://en.wikipedia.org/wiki/Huffman_coding) of chess games. Builds upon [`huffman-compress2`](https://crates.io/crates/huffman-compress2), [Niklas Fiekas](https://github.com/niklasf)'s crates [`shakmaty`](https://crates.io/crates/shakmaty) and [`pgn-reader`](https://crates.io/crates/pgn-reader), and his [blog post on the topic](https://lichess.org/blog/Wqa7GiAAAOIpBLoY/developer-update-275-improved-game-compression) and [Java implementation](https://github.com/lichess-org/compression/tree/master/src/main/java/game).
+A Rust crate for [Huffman compression](https://en.wikipedia.org/wiki/Huffman_coding) of chess games. Builds upon Piotr Beling's [`minimum_redundancy`](https://crates.io/crates/minimum_redundancy), [Niklas Fiekas](https://github.com/niklasf)'s crates [`shakmaty`](https://crates.io/crates/shakmaty) and [`pgn-reader`](https://crates.io/crates/pgn-reader), and his [blog post on the topic](https://lichess.org/blog/Wqa7GiAAAOIpBLoY/developer-update-275-improved-game-compression) and [Java implementation](https://github.com/lichess-org/compression/tree/master/src/main/java/game).
 
 Refer to the documentation for up-to-date usage examples:
 
