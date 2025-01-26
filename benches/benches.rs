@@ -16,6 +16,9 @@ static PGN: &'static str = "1. e4 c5 2. c3 d5 3. exd5 Nf6 4. Bb5+ Bd7 5. Bxd7+ Q
     67. Rf8 Re2+ 68. Kg1 Re3 69. Kf1 Kf3 70. Kg1 Re2 71. Kf1 Rf2+ 72. Ke1 Re2+ 
     73. Kd1 Rg2 74. Kc1 Rf2 75. Kb1 Rf1+ 76. Kb2 Rf2+ 77. Kb3 Re2 0-1";
 
+static PGN_SHORT: &'static str = "1. e4 c5 2. c3 d5 3. exd5 Nf6 4. Bb5+ Bd7 5. Bxd7+ Qxd7 
+    6. d4 cxd4 7. Qxd4 Qxd5 8. Nf3 Nc6 9. Qxd5 Nxd5 10. O-O e5 11. Re1";
+
 fn bench_encode_pgn(c: &mut Criterion) {
     let pgn = black_box(PGN);
 
@@ -41,6 +44,19 @@ fn bench_decode(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, bench_encode_pgn, bench_decode);
+fn bench_decode_short(c: &mut Criterion) {
+    let bits = encode_pgn(black_box(PGN_SHORT)).unwrap();
+
+    c.bench_function("decode", |b| {
+        b.iter(|| {
+            let (moves, positions) = decode_game(&bits).unwrap();
+
+            assert_eq!(moves.len(), positions.len());
+            assert_eq!(moves.last().unwrap().to(), Square::E1);
+        })
+    });
+}
+
+criterion_group!(benches, bench_encode_pgn, bench_decode, bench_decode_short);
 
 criterion_main!(benches);
