@@ -11,10 +11,10 @@ categories = ["compression", "encoding", "algorithms", "games"]
 description = "Compresses chess games using Huffman coding"
 
 [dependencies]
-huffman-compress2 = "0.7"
 shakmaty = "0.27"
 bit-vec = "0.8"
 pgn-reader = "0.26"
+minimum_redundancy = "0.3"
 
 [dev-dependencies]
 criterion = "0.5"

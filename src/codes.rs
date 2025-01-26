@@ -1,268 +1,85 @@
-use huffman_compress2::{Book, CodeBuilder, Tree};
-use std::collections::HashMap;
-use std::iter::FromIterator;
+use bit_vec::BitVec;
+use minimum_redundancy::{BitsPerFragment, Coding, Decoder};
 use std::sync::LazyLock;
 
-// Huffman weights from:
+fn generate_code_from_lichess_weights() -> Coding<u8> {
+    Coding::from_frequencies(BitsPerFragment(1), WEIGHTS)
+}
+
+// Huffman weights based on:
 // https://github.com/lichess-org/compression/blob/master/src/main/java/game/Huffman.java#L64
-#[allow(clippy::too_many_lines)]
-pub static CODE_FROM_LICHESS_WEIGHTS: LazyLock<(Book<u8>, Tree<u8>)> = LazyLock::new(|| {
-    let mut weights: HashMap<u8, u32> = HashMap::new();
-    weights.insert(0, 225_883_932);
-    weights.insert(1, 134_956_126);
-    weights.insert(2, 89_041_269);
-    weights.insert(3, 69_386_238);
-    weights.insert(4, 57_040_790);
-    weights.insert(5, 44_974_559);
-    weights.insert(6, 36_547_155);
-    weights.insert(7, 31_624_920);
-    weights.insert(8, 28_432_772);
-    weights.insert(9, 26_540_493);
-    weights.insert(10, 24_484_873);
-    weights.insert(11, 23_058_034);
-    weights.insert(12, 23_535_272);
-    weights.insert(13, 20_482_457);
-    weights.insert(14, 20_450_172);
-    weights.insert(15, 18_316_057);
-    weights.insert(16, 17_214_833);
-    weights.insert(17, 16_964_761);
-    weights.insert(18, 16_530_028);
-    weights.insert(19, 15_369_510);
-    weights.insert(20, 14_178_440);
-    weights.insert(21, 14_275_714);
-    weights.insert(22, 13_353_306);
-    weights.insert(23, 12_829_602);
-    weights.insert(24, 13_102_592);
-    weights.insert(25, 11_932_647);
-    weights.insert(26, 10_608_657);
-    weights.insert(27, 10_142_459);
-    weights.insert(28, 8_294_594);
-    weights.insert(29, 7_337_490);
-    weights.insert(30, 6_337_744);
-    weights.insert(31, 5_380_717);
-    weights.insert(32, 4_560_556);
-    weights.insert(33, 3_913_313);
-    weights.insert(34, 3_038_767);
-    weights.insert(35, 2_480_514);
-    weights.insert(36, 1_951_026);
-    weights.insert(37, 1_521_451);
-    weights.insert(38, 1_183_252);
-    weights.insert(39, 938_708);
-    weights.insert(40, 673_339);
-    weights.insert(41, 513_153);
-    weights.insert(42, 377_299);
-    weights.insert(43, 276_996);
-    weights.insert(44, 199_682);
-    weights.insert(45, 144_602);
-    weights.insert(46, 103_313);
-    weights.insert(47, 73046);
-    weights.insert(48, 52339);
-    weights.insert(49, 36779);
-    weights.insert(50, 26341);
-    weights.insert(51, 18719);
-    weights.insert(52, 13225);
-    weights.insert(53, 9392);
-    weights.insert(54, 6945);
-    weights.insert(55, 4893);
-    weights.insert(56, 3698);
-    weights.insert(57, 2763);
-    weights.insert(58, 2114);
-    weights.insert(59, 1631);
-    weights.insert(60, 1380);
-    weights.insert(61, 1090);
-    weights.insert(62, 887);
-    weights.insert(63, 715);
-    weights.insert(64, 590);
-    weights.insert(65, 549);
-    weights.insert(66, 477);
-    weights.insert(67, 388);
-    weights.insert(68, 351);
-    weights.insert(69, 319);
-    weights.insert(70, 262);
-    weights.insert(71, 236);
-    weights.insert(72, 200);
-    weights.insert(73, 210);
-    weights.insert(74, 153);
-    weights.insert(75, 117);
-    weights.insert(76, 121);
-    weights.insert(77, 121);
-    weights.insert(78, 115);
-    weights.insert(79, 95);
-    weights.insert(80, 75);
-    weights.insert(81, 67);
-    weights.insert(82, 55);
-    weights.insert(83, 50);
-    weights.insert(84, 55);
-    weights.insert(85, 33);
-    weights.insert(86, 33);
-    weights.insert(87, 30);
-    weights.insert(88, 32);
-    weights.insert(89, 28);
-    weights.insert(90, 29);
-    weights.insert(91, 27);
-    weights.insert(92, 21);
-    weights.insert(93, 15);
-    weights.insert(94, 9);
-    weights.insert(95, 10);
-    weights.insert(96, 12);
-    weights.insert(97, 12);
-    weights.insert(98, 8);
-    weights.insert(99, 7);
-    weights.insert(100, 2);
-    weights.insert(101, 4);
-    weights.insert(102, 5);
-    weights.insert(103, 5);
-    weights.insert(104, 0);
-    weights.insert(105, 5);
-    weights.insert(106, 1);
-    weights.insert(107, 1);
-    weights.insert(108, 0);
-    weights.insert(109, 1);
-    weights.insert(110, 2);
-    weights.insert(111, 1);
-    weights.insert(112, 1);
-    weights.insert(113, 0);
-    weights.insert(114, 0);
-    weights.insert(115, 1);
-    weights.insert(116, 0);
-    weights.insert(117, 0);
-    weights.insert(118, 0);
-    weights.insert(119, 0);
-    weights.insert(120, 0);
-    weights.insert(121, 0);
-    weights.insert(122, 0);
-    weights.insert(123, 0);
-    weights.insert(124, 0);
-    weights.insert(125, 0);
-    weights.insert(126, 0);
-    weights.insert(127, 0);
-    weights.insert(128, 0);
-    weights.insert(129, 0);
-    weights.insert(130, 0);
-    weights.insert(131, 0);
-    weights.insert(132, 0);
-    weights.insert(133, 0);
-    weights.insert(134, 0);
-    weights.insert(135, 0);
-    weights.insert(136, 0);
-    weights.insert(137, 0);
-    weights.insert(138, 0);
-    weights.insert(139, 0);
-    weights.insert(140, 0);
-    weights.insert(141, 0);
-    weights.insert(142, 0);
-    weights.insert(143, 0);
-    weights.insert(144, 0);
-    weights.insert(145, 0);
-    weights.insert(146, 0);
-    weights.insert(147, 0);
-    weights.insert(148, 0);
-    weights.insert(149, 0);
-    weights.insert(150, 0);
-    weights.insert(151, 0);
-    weights.insert(152, 0);
-    weights.insert(153, 0);
-    weights.insert(154, 0);
-    weights.insert(155, 0);
-    weights.insert(156, 0);
-    weights.insert(157, 0);
-    weights.insert(158, 0);
-    weights.insert(159, 0);
-    weights.insert(160, 0);
-    weights.insert(161, 0);
-    weights.insert(162, 0);
-    weights.insert(163, 0);
-    weights.insert(164, 0);
-    weights.insert(165, 0);
-    weights.insert(166, 0);
-    weights.insert(167, 0);
-    weights.insert(168, 0);
-    weights.insert(169, 0);
-    weights.insert(170, 0);
-    weights.insert(171, 0);
-    weights.insert(172, 0);
-    weights.insert(173, 0);
-    weights.insert(174, 0);
-    weights.insert(175, 0);
-    weights.insert(176, 0);
-    weights.insert(177, 0);
-    weights.insert(178, 0);
-    weights.insert(179, 0);
-    weights.insert(180, 0);
-    weights.insert(181, 0);
-    weights.insert(182, 0);
-    weights.insert(183, 0);
-    weights.insert(184, 0);
-    weights.insert(185, 0);
-    weights.insert(186, 0);
-    weights.insert(187, 0);
-    weights.insert(188, 0);
-    weights.insert(189, 0);
-    weights.insert(190, 0);
-    weights.insert(191, 0);
-    weights.insert(192, 0);
-    weights.insert(193, 0);
-    weights.insert(194, 0);
-    weights.insert(195, 0);
-    weights.insert(196, 0);
-    weights.insert(197, 0);
-    weights.insert(198, 0);
-    weights.insert(199, 0);
-    weights.insert(200, 0);
-    weights.insert(201, 0);
-    weights.insert(202, 0);
-    weights.insert(203, 0);
-    weights.insert(204, 0);
-    weights.insert(205, 0);
-    weights.insert(206, 0);
-    weights.insert(207, 0);
-    weights.insert(208, 0);
-    weights.insert(209, 0);
-    weights.insert(210, 0);
-    weights.insert(211, 0);
-    weights.insert(212, 0);
-    weights.insert(213, 0);
-    weights.insert(214, 0);
-    weights.insert(215, 0);
-    weights.insert(216, 0);
-    weights.insert(217, 0);
-    weights.insert(218, 0);
-    weights.insert(219, 0);
-    weights.insert(220, 0);
-    weights.insert(221, 0);
-    weights.insert(222, 0);
-    weights.insert(223, 0);
-    weights.insert(224, 0);
-    weights.insert(225, 0);
-    weights.insert(226, 0);
-    weights.insert(227, 0);
-    weights.insert(228, 0);
-    weights.insert(229, 0);
-    weights.insert(230, 0);
-    weights.insert(231, 0);
-    weights.insert(232, 0);
-    weights.insert(233, 0);
-    weights.insert(234, 0);
-    weights.insert(235, 0);
-    weights.insert(236, 0);
-    weights.insert(237, 0);
-    weights.insert(238, 0);
-    weights.insert(239, 0);
-    weights.insert(240, 0);
-    weights.insert(241, 0);
-    weights.insert(242, 0);
-    weights.insert(243, 0);
-    weights.insert(244, 0);
-    weights.insert(245, 0);
-    weights.insert(246, 0);
-    weights.insert(247, 0);
-    weights.insert(248, 0);
-    weights.insert(249, 0);
-    weights.insert(250, 0);
-    weights.insert(251, 0);
-    weights.insert(252, 0);
-    weights.insert(253, 0);
-    weights.insert(254, 0);
-    weights.insert(255, 0);
-    CodeBuilder::from_iter(weights).finish()
+// They are modified so each value has a unique weight.
+const WEIGHTS: [u64; 256] = [
+    4291794708, 2564166394, 1691784111, 1318338522, 1083775010, 854516621, 694395945, 600873480,
+    540222668, 504269367, 465212587, 438102646, 447170168, 389166683, 388553268, 348005083,
+    327081827, 322330459, 314070532, 292020690, 269390360, 271238566, 253712814, 243762438,
+    248949248, 226720293, 201564483, 192706721, 157597286, 139412310, 120417136, 102233623,
+    86650564, 74352947, 57736573, 47129766, 37069494, 28907569, 22481788, 17835452, 12793441,
+    9749907, 7168681, 5262924, 3793958, 2747438, 1962947, 1387874, 994441, 698801, 500479, 355661,
+    251275, 178448, 131955, 92967, 70262, 52497, 40166, 30989, 26220, 20710, 16853, 13585, 11210,
+    10431, 9063, 7372, 6669, 6061, 4978, 4484, 3800, 3990, 2907, 2223, 2299, 2298, 2185, 1805,
+    1425, 1273, 1045, 950, 1044, 627, 626, 570, 608, 532, 551, 513, 399, 285, 171, 190, 228, 227,
+    158, 157, 156, 155, 154, 153, 152, 151, 150, 149, 148, 147, 146, 145, 144, 143, 142, 141, 140,
+    139, 138, 137, 136, 135, 134, 133, 132, 131, 130, 129, 128, 127, 126, 125, 124, 123, 122, 121,
+    120, 119, 118, 117, 116, 115, 114, 113, 112, 111, 110, 109, 108, 107, 106, 105, 104, 103, 102,
+    101, 100, 99, 98, 97, 96, 95, 94, 93, 92, 91, 90, 89, 88, 87, 86, 85, 84, 83, 82, 81, 80, 79,
+    78, 77, 76, 75, 74, 73, 72, 71, 70, 69, 68, 67, 66, 65, 64, 63, 62, 61, 60, 59, 58, 57, 56, 55,
+    54, 53, 52, 51, 50, 49, 48, 47, 46, 45, 44, 43, 42, 41, 40, 39, 38, 37, 36, 35, 34, 33, 32, 31,
+    30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6,
+    5, 4, 3, 2, 1,
+];
+
+static CODE_FROM_LICHESS_WEIGHTS: LazyLock<Coding<u8>> =
+    LazyLock::new(generate_code_from_lichess_weights);
+
+pub static BOOK_FROM_LICHESS_WEIGHTS: LazyLock<Book> = LazyLock::new(|| Book {
+    codes: (&*CODE_FROM_LICHESS_WEIGHTS)
+        .codes_for_values_array()
+        .map(|c| {
+            let nbits = c.len as usize;
+            let mut bv = BitVec::from_elem(nbits, false);
+            for i in 0..32 {
+                if (c.content >> i) & 1 == 1 {
+                    bv.set(nbits - 1 - i, true);
+                }
+            }
+
+            bv
+        }),
 });
+
+pub fn get_decoder<'a>() -> Decoder<'a, u8> {
+    (&*CODE_FROM_LICHESS_WEIGHTS).decoder()
+}
+
+pub struct Book {
+    codes: [BitVec; 256],
+}
+
+impl Book {
+    pub fn encode(&self, buffer: &mut BitVec, symbol: u8) {
+        buffer.extend(&self.codes[symbol as usize]);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::codes::WEIGHTS;
+
+    #[test]
+    fn deterministic_code_gen() {
+        let code_map = super::generate_code_from_lichess_weights().codes_for_values();
+        for _ in 0..1000 {
+            let code_map2 = super::generate_code_from_lichess_weights().codes_for_values();
+            assert_eq!(code_map, code_map2);
+        }
+    }
+
+    #[test]
+    fn unique_weights() {
+        let mut unique_weights = WEIGHTS.to_vec();
+        unique_weights.sort_unstable();
+        unique_weights.dedup();
+        assert_eq!(WEIGHTS.len(), unique_weights.len());
+    }
+}
