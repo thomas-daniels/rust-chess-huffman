@@ -26,10 +26,12 @@ pub fn move_rank(pos: &Chess, m: &Move) -> Option<usize> {
 }
 
 pub fn nth_from_position(n: usize, pos: &Chess) -> Option<Move> {
-    let mut legals = pos.legal_moves();
+    let legals = pos.legal_moves();
+    let mut scored_legals: Vec<(&Move, Score)> =
+        legals.iter().map(|m| (m, -move_score(pos, m))).collect();
     if legals.len() > n {
-        let (_, m, _) = legals.select_nth_unstable_by_key(n, |m| -move_score(pos, m));
-        Some(m.clone())
+        let (_, m, _) = scored_legals.select_nth_unstable_by_key(n, |(_, score)| *score);
+        Some(m.0.clone())
     } else {
         None
     }
