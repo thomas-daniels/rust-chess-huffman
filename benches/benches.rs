@@ -1,4 +1,4 @@
-use chess_huffman::{decode_game, encode_pgn};
+use chess_huffman::{decode_game, encode_pgn, EncodedGame};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use shakmaty::Square;
 
@@ -23,7 +23,7 @@ fn bench_encode_pgn(c: &mut Criterion) {
         b.iter(|| {
             let encoded = encode_pgn(pgn).unwrap();
 
-            assert!(encoded.len() > 154);
+            assert!(encoded.inner.len() > 154);
         })
     });
 }
@@ -41,6 +41,38 @@ fn bench_decode(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, bench_encode_pgn, bench_decode);
+fn bench_encode_pgn_bytes(c: &mut Criterion) {
+    let pgn = black_box(PGN);
+
+    c.bench_function("encode-pgn-bytes", |b| {
+        b.iter(|| {
+            let encoded = encode_pgn(pgn).unwrap().to_bytes();
+
+            assert!(encoded.len() > 19);
+        })
+    });
+}
+
+fn bench_decode_bytes(c: &mut Criterion) {
+    let bytes = encode_pgn(black_box(PGN)).unwrap().to_bytes();
+
+    c.bench_function("decode-bytes", |b| {
+        b.iter(|| {
+            let encoded = EncodedGame::from_bytes(&bytes);
+            let (moves, positions) = decode_game(&encoded).unwrap();
+
+            assert_eq!(moves.len(), positions.len());
+            assert_eq!(moves.last().unwrap().to(), Square::E2);
+        })
+    });
+}
+
+criterion_group!(
+    benches,
+    bench_encode_pgn,
+    bench_decode,
+    bench_encode_pgn_bytes,
+    bench_decode_bytes
+);
 
 criterion_main!(benches);

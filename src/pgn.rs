@@ -1,5 +1,4 @@
-use crate::{GameEncodeError, MoveByMoveEncoder};
-use bit_vec::BitVec;
+use crate::{EncodedGame, GameEncodeError, MoveByMoveEncoder};
 use pgn_reader::{SanPlus, Skip, Visitor};
 use shakmaty::san::San;
 
@@ -35,7 +34,7 @@ impl Default for Encoder<'_> {
 }
 
 impl Visitor for Encoder<'_> {
-    type Result = std::result::Result<BitVec, GameEncodeError>;
+    type Result = std::result::Result<EncodedGame, GameEncodeError>;
 
     fn begin_game(&mut self) {
         self.error = None;
@@ -56,7 +55,7 @@ impl Visitor for Encoder<'_> {
 
     fn end_game(&mut self) -> Self::Result {
         if self.error.is_none() {
-            Ok(self.mbm.buffer.clone())
+            Ok(self.mbm.result.clone())
         } else {
             let mut swap = None;
             std::mem::swap(&mut swap, &mut self.error);

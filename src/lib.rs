@@ -104,6 +104,30 @@ impl From<PlayError<Chess>> for GameDecodeError {
     }
 }
 
+#[derive(Debug, Eq, Hash, PartialEq, Clone)]
+pub struct EncodedGame {
+    pub inner: BitVec,
+}
+
+impl EncodedGame {
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut v = self.inner.to_bytes();
+        let padding = self.inner.len() % 8;
+        if padding == 0 {
+            v.push(0);
+        } else {
+            v.push(8 - padding as u8);
+        }
+        v
+    }
+
+    pub fn from_bytes(bytes: &[u8]) -> Self {
+        let mut bv = BitVec::from_bytes(&bytes[..bytes.len() - 1]);
+        bv.truncate(bv.len() - bytes[bytes.len() - 1] as usize);
+        Self { inner: bv }
+    }
+}
+
 /// Encodes a chess game into a compressed bit vector.
 ///
 /// # Arguments
@@ -144,12 +168,12 @@ impl From<PlayError<Chess>> for GameDecodeError {
 /// # Ok(())
 /// # }
 /// ```
-pub fn encode_game(moves: &[Move]) -> EncodeResult<BitVec> {
+pub fn encode_game(moves: &[Move]) -> EncodeResult<EncodedGame> {
     let mut encoder = MoveByMoveEncoder::new();
     for m in moves {
         encoder.add_move(m)?;
     }
-    Ok(encoder.buffer)
+    Ok(encoder.result)
 }
 
 /// Encodes a chess game, represented as a PGN (Portable Game Notation), into a compressed bit vector.
@@ -175,13 +199,15 @@ pub fn encode_game(moves: &[Move]) -> EncodeResult<BitVec> {
 /// # Ok(())
 /// # }
 /// ```
-pub fn encode_pgn<T: AsRef<[u8]>>(pgn: T) -> EncodeResult<BitVec> {
+pub fn encode_pgn<T: AsRef<[u8]>>(pgn: T) -> EncodeResult<EncodedGame> {
     let mut reader = pgn_reader::BufferedReader::new_cursor(pgn.as_ref());
 
     let mut encoder = pgn::Encoder::new();
-    let bits = reader
-        .read_game(&mut encoder)?
-        .unwrap_or_else(|| Ok(BitVec::new()))?;
+    let bits = reader.read_game(&mut encoder)?.unwrap_or_else(|| {
+        Ok(EncodedGame {
+            inner: BitVec::new(),
+        })
+    })?;
     Ok(bits)
 }
 
@@ -195,14 +221,16 @@ pub fn encode_pgn<T: AsRef<[u8]>>(pgn: T) -> EncodeResult<BitVec> {
 ///
 /// [`GameEncodeError`] if the file could not be read or if the PGN is invalid,
 /// its `kind` attribute tells more about the error reason.
-pub fn encode_pgn_file<P: AsRef<std::path::Path>>(path: P) -> EncodeResult<BitVec> {
+pub fn encode_pgn_file<P: AsRef<std::path::Path>>(path: P) -> EncodeResult<EncodedGame> {
     let file = std::fs::File::open(path)?;
     let mut reader = pgn_reader::BufferedReader::new(file);
 
     let mut encoder = pgn::Encoder::new();
-    let bits = reader
-        .read_game(&mut encoder)?
-        .unwrap_or_else(|| Ok(BitVec::new()))?;
+    let bits = reader.read_game(&mut encoder)?.unwrap_or_else(|| {
+        Ok(EncodedGame {
+            inner: BitVec::new(),
+        })
+    })?;
     Ok(bits)
 }
 
@@ -229,9 +257,9 @@ pub fn encode_pgn_file<P: AsRef<std::path::Path>>(path: P) -> EncodeResult<BitVe
 /// let decoded = decode_game(&encoded)?;
 /// # Ok(())
 /// # }
-pub fn decode_game(bits: &BitVec) -> DecodeResult<(Vec<Move>, Vec<Chess>)> {
+pub fn decode_game(encoded: &EncodedGame) -> DecodeResult<(Vec<Move>, Vec<Chess>)> {
     let (_, tree) = &*codes::CODE_FROM_LICHESS_WEIGHTS;
-    let ranks = tree.unbounded_decoder(bits);
+    let ranks = tree.unbounded_decoder(&encoded.inner);
     let mut moves = vec![];
     let mut pos = Chess::default();
     let mut positions = vec![];
@@ -287,11 +315,11 @@ pub fn decode_game(bits: &BitVec) -> DecodeResult<(Vec<Move>, Vec<Chess>)> {
 /// # Ok(())
 /// # }
 pub fn decode_move_by_move<T: MoveByMoveDecoder>(
-    bits: &BitVec,
+    encoded: &EncodedGame,
     decoder: &mut T,
 ) -> DecodeResult<()> {
     let (_, tree) = &*codes::CODE_FROM_LICHESS_WEIGHTS;
-    let ranks = tree.unbounded_decoder(bits);
+    let ranks = tree.unbounded_decoder(&encoded.inner);
     let mut pos = Chess::default();
     for rank in ranks {
         let m = ranking::nth_from_position(rank as usize, &pos).ok_or(GameDecodeError {})?;
@@ -327,8 +355,8 @@ pub struct MoveByMoveEncoder<'a> {
     book: &'a Book<u8>,
     /// The current chess position.
     pub pos: Chess,
-    /// The resulting bit vector.
-    pub buffer: BitVec,
+    /// The resulting encoded game.
+    pub result: EncodedGame,
 }
 
 impl MoveByMoveEncoder<'_> {
@@ -339,7 +367,9 @@ impl MoveByMoveEncoder<'_> {
         Self {
             book,
             pos: Chess::default(),
-            buffer: BitVec::new(),
+            result: EncodedGame {
+                inner: BitVec::new(),
+            },
         }
     }
 
@@ -378,7 +408,7 @@ impl MoveByMoveEncoder<'_> {
                     });
                 }
                 #[allow(clippy::cast_possible_truncation)]
-                self.book.encode(&mut self.buffer, &(rank as u8))?;
+                self.book.encode(&mut self.result.inner, &(rank as u8))?;
                 self.pos.play_unchecked(m);
             }
             None => {
@@ -395,7 +425,7 @@ impl MoveByMoveEncoder<'_> {
     /// Clears the encoder: restores the game state to the start position and empties `buffer`.
     pub fn clear(&mut self) {
         self.pos = Chess::default();
-        self.buffer.truncate(0);
+        self.result.inner.truncate(0);
     }
 }
 
