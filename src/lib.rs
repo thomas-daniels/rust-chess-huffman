@@ -96,6 +96,7 @@ impl From<PlayError<Chess>> for GameDecodeError {
     }
 }
 
+/// Representation of an encoded chess game.
 #[derive(Debug, Eq, Hash, PartialEq, Clone)]
 pub struct EncodedGame {
     pub inner: Vec<u64>,
@@ -103,6 +104,7 @@ pub struct EncodedGame {
 }
 
 impl EncodedGame {
+    /// Convert the encoded chess game to a byte vector. Use `from_bytes` to convert the result back to an `EncodedGame`.
     #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
         let byte_count = if self.bit_index % 8 == 0 {
@@ -120,6 +122,7 @@ impl EncodedGame {
         .concat()
     }
 
+    /// Convert a byte vector (that was the output of `to_bytes`) to an `EncodedGame`.
     #[must_use]
     pub fn from_bytes(bytes: &[u8]) -> Self {
         let total_len_minus_one = bytes.len() - 1;
