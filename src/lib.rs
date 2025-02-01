@@ -118,7 +118,7 @@ impl EncodedGame {
         let m = (self.bit_index % 64) as u8;
         let padding = if m == 0 { 0 } else { 64 - m };
 
-        let mut wrt = vec![];
+        let mut wrt = Vec::with_capacity(self.inner.len() * 8 + 1);
         for x in &self.inner {
             wrt.write_u64::<LittleEndian>(*x).unwrap();
         }
@@ -143,12 +143,8 @@ impl EncodedGame {
         };
         let mut rdr = Cursor::new(full_slice);
         let mut buffer = vec![];
-        loop {
-            if let Ok(x) = rdr.read_u64::<LittleEndian>() {
-                buffer.push(x);
-            } else {
-                break;
-            }
+        while let Ok(x) = rdr.read_u64::<LittleEndian>() {
+            buffer.push(x);
         }
         EncodedGame {
             inner: buffer,
