@@ -7,7 +7,8 @@ mod ranking;
 #[cfg(test)]
 mod tests;
 
-use bit_vec::BitVec;
+use bitm::BitAccess;
+use bytemuck;
 use codes::Book;
 use minimum_redundancy::DecodingResult;
 use shakmaty::san::{ParseSanError, SanError};
@@ -98,25 +99,47 @@ impl From<PlayError<Chess>> for GameDecodeError {
 
 #[derive(Debug, Eq, Hash, PartialEq, Clone)]
 pub struct EncodedGame {
-    pub inner: BitVec,
+    pub inner: Vec<u64>,
+    pub bit_index: usize,
 }
 
 impl EncodedGame {
     pub fn to_bytes(&self) -> Vec<u8> {
-        let mut v = self.inner.to_bytes();
-        let padding = self.inner.len() % 8;
-        if padding == 0 {
-            v.push(0);
+        let byte_count = if self.bit_index % 8 == 0 {
+            self.bit_index / 8
         } else {
-            v.push(8 - padding as u8);
-        }
-        v
+            self.bit_index / 8 + 1
+        };
+        let m = (self.bit_index % 64) as u8;
+        let padding = if m == 0 { 0 } else { 64 - m };
+        [
+            &bytemuck::cast_slice(&self.inner)[0..byte_count],
+            &[padding],
+        ]
+        .concat()
     }
 
     pub fn from_bytes(bytes: &[u8]) -> Self {
-        let mut bv = BitVec::from_bytes(&bytes[..bytes.len() - 1]);
-        bv.truncate(bv.len() - bytes[bytes.len() - 1] as usize);
-        Self { inner: bv }
+        let total_len_minus_one = bytes.len() - 1;
+        let padding = bytes[total_len_minus_one] as usize;
+        let padding_bytes = padding / 8;
+        let bit_index = total_len_minus_one * 8 - (padding % 8);
+        let content_slice = &bytes[0..total_len_minus_one];
+        EncodedGame {
+            inner: if padding_bytes != 0 {
+                bytemuck::cast_slice(&[content_slice, &vec![0; padding_bytes]].concat()).to_vec()
+            } else {
+                bytemuck::cast_slice(content_slice).to_vec()
+            },
+            bit_index,
+        }
+    }
+
+    pub fn new() -> Self {
+        Self {
+            inner: vec![0; 256 / 64],
+            bit_index: 0,
+        }
     }
 }
 
@@ -136,7 +159,6 @@ impl EncodedGame {
 /// use shakmaty::{Move, Role, Square};
 /// use chess_huffman::encode_game;
 ///
-/// # use bit_vec::BitVec;
 /// # use chess_huffman::GameEncodeError;
 /// # fn try_main() -> Result<(), GameEncodeError> {
 /// let moves = vec![
@@ -182,7 +204,6 @@ pub fn encode_game(moves: &[Move]) -> EncodeResult<EncodedGame> {
 ///
 /// ```
 /// # use chess_huffman::encode_pgn;
-/// # use bit_vec::BitVec;
 /// # use chess_huffman::GameEncodeError;
 /// # fn try_main() -> Result<(), GameEncodeError> {
 /// let encoded = encode_pgn("1. e4 c5 2. Nf3 e6 3. c3 d5 4. e5")?;
@@ -195,11 +216,9 @@ pub fn encode_pgn<T: AsRef<[u8]>>(pgn: T) -> EncodeResult<EncodedGame> {
     let mut reader = pgn_reader::BufferedReader::new_cursor(pgn.as_ref());
 
     let mut encoder = pgn::Encoder::new();
-    let bits = reader.read_game(&mut encoder)?.unwrap_or_else(|| {
-        Ok(EncodedGame {
-            inner: BitVec::new(),
-        })
-    })?;
+    let bits = reader
+        .read_game(&mut encoder)?
+        .unwrap_or_else(|| Ok(EncodedGame::new()))?;
     Ok(bits)
 }
 
@@ -218,11 +237,9 @@ pub fn encode_pgn_file<P: AsRef<std::path::Path>>(path: P) -> EncodeResult<Encod
     let mut reader = pgn_reader::BufferedReader::new(file);
 
     let mut encoder = pgn::Encoder::new();
-    let bits = reader.read_game(&mut encoder)?.unwrap_or_else(|| {
-        Ok(EncodedGame {
-            inner: BitVec::new(),
-        })
-    })?;
+    let bits = reader
+        .read_game(&mut encoder)?
+        .unwrap_or_else(|| Ok(EncodedGame::new()))?;
     Ok(bits)
 }
 
@@ -242,7 +259,6 @@ pub fn encode_pgn_file<P: AsRef<std::path::Path>>(path: P) -> EncodeResult<Encod
 ///
 /// ```
 /// # use chess_huffman::{encode_pgn, decode_game};
-/// # use bit_vec::BitVec;
 /// # use chess_huffman::GameEncodeError;
 /// # fn try_main() -> Result<(), Box<dyn std::error::Error>> {
 /// let encoded = encode_pgn("1. e4 c5 2. Nf3 e6 3. c3 d5 4. e5")?;
@@ -256,7 +272,7 @@ pub fn decode_game(encoded: &EncodedGame) -> DecodeResult<(Vec<Move>, Vec<Chess>
     let mut pos = Chess::default();
     let mut positions = vec![];
 
-    let mut iter = encoded.inner.iter();
+    let mut iter = encoded.inner.bit_in_range_iter(0..encoded.bit_index);
 
     loop {
         match decoder.decode_next(&mut iter) {
@@ -300,7 +316,6 @@ pub fn decode_game(encoded: &EncodedGame) -> DecodeResult<(Vec<Move>, Vec<Chess>
 ///
 /// ```
 /// # use chess_huffman::{encode_pgn, decode_move_by_move};
-/// # use bit_vec::BitVec;
 /// # use chess_huffman::{GameEncodeError, MoveByMoveDecoder};
 /// use shakmaty::{Chess, Move};
 ///
@@ -331,7 +346,7 @@ pub fn decode_move_by_move<T: MoveByMoveDecoder>(
 ) -> DecodeResult<()> {
     let mut huff_decoder = codes::get_decoder();
 
-    let mut iter = encoded.inner.iter();
+    let mut iter = encoded.inner.bit_in_range_iter(0..encoded.bit_index);
 
     let mut pos = Chess::default();
     loop {
@@ -369,7 +384,6 @@ pub fn decode_move_by_move<T: MoveByMoveDecoder>(
 /// # use chess_huffman::MoveByMoveEncoder;
 /// use shakmaty::Move;
 ///
-/// # use bit_vec::BitVec;
 /// # use chess_huffman::GameEncodeError;
 /// # fn try_main() -> Result<(), GameEncodeError> {
 /// let moves: Vec<Move> = vec![ /* ... */ ];
@@ -396,9 +410,7 @@ impl MoveByMoveEncoder<'_> {
         Self {
             book,
             pos: Chess::default(),
-            result: EncodedGame {
-                inner: BitVec::new(),
-            },
+            result: EncodedGame::new(),
         }
     }
 
@@ -414,7 +426,6 @@ impl MoveByMoveEncoder<'_> {
     /// # use chess_huffman::MoveByMoveEncoder;
     /// use shakmaty::Move;
     ///
-    /// # use bit_vec::BitVec;
     /// # use chess_huffman::GameEncodeError;
     /// # fn try_main() -> Result<(), GameEncodeError> {
     /// let moves: Vec<Move> = vec![ /* ... */ ];
@@ -437,7 +448,7 @@ impl MoveByMoveEncoder<'_> {
                     });
                 }
                 #[allow(clippy::cast_possible_truncation)]
-                self.book.encode(&mut self.result.inner, rank as u8);
+                self.book.encode(&mut self.result, rank as u8);
                 self.pos.play_unchecked(m);
             }
             None => {
@@ -454,7 +465,7 @@ impl MoveByMoveEncoder<'_> {
     /// Clears the encoder: restores the game state to the start position and empties `buffer`.
     pub fn clear(&mut self) {
         self.pos = Chess::default();
-        self.result.inner.truncate(0);
+        self.result = EncodedGame::new();
     }
 }
 
@@ -470,7 +481,6 @@ impl Default for MoveByMoveEncoder<'_> {
 ///
 /// ```
 /// # use chess_huffman::{encode_pgn, decode_move_by_move};
-/// # use bit_vec::BitVec;
 /// # use chess_huffman::{GameEncodeError, MoveByMoveDecoder};
 /// use shakmaty::{Chess, Move};
 ///

@@ -23,7 +23,7 @@ fn bench_encode_pgn(c: &mut Criterion) {
         b.iter(|| {
             let encoded = encode_pgn(pgn).unwrap();
 
-            assert!(encoded.inner.len() > 154);
+            assert!(encoded.inner.len() > 154 / 64);
         })
     });
 }
@@ -46,15 +46,17 @@ fn bench_encode_pgn_bytes(c: &mut Criterion) {
 
     c.bench_function("encode-pgn-bytes", |b| {
         b.iter(|| {
-            let encoded = encode_pgn(pgn).unwrap().to_bytes();
+            let encoded = encode_pgn(pgn).unwrap();
+            let bytes = encoded.to_bytes();
 
-            assert!(encoded.len() > 19);
+            assert!(bytes.len() > 19);
         })
     });
 }
 
 fn bench_decode_bytes(c: &mut Criterion) {
-    let bytes = encode_pgn(black_box(PGN)).unwrap().to_bytes();
+    let encoded = encode_pgn(black_box(PGN)).unwrap();
+    let bytes = encoded.to_bytes();
 
     c.bench_function("decode-bytes", |b| {
         b.iter(|| {

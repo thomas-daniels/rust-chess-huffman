@@ -1,6 +1,8 @@
-use bit_vec::BitVec;
-use minimum_redundancy::{BitsPerFragment, Coding, Decoder};
+use bitm::BitAccess;
+use minimum_redundancy::{BitsPerFragment, Code, Coding, Decoder};
 use std::sync::LazyLock;
+
+use crate::EncodedGame;
 
 fn generate_code_from_lichess_weights() -> Coding<u8> {
     Coding::from_frequencies(BitsPerFragment(1), WEIGHTS)
@@ -9,6 +11,7 @@ fn generate_code_from_lichess_weights() -> Coding<u8> {
 // Huffman weights based on:
 // https://github.com/lichess-org/compression/blob/master/src/main/java/game/Huffman.java#L64
 // They are modified so each value has a unique weight.
+#[allow(clippy::unreadable_literal)]
 const WEIGHTS: [u64; 256] = [
     4291794708, 2564166394, 1691784111, 1318338522, 1083775010, 854516621, 694395945, 600873480,
     540222668, 504269367, 465212587, 438102646, 447170168, 389166683, 388553268, 348005083,
@@ -33,19 +36,7 @@ static CODE_FROM_LICHESS_WEIGHTS: LazyLock<Coding<u8>> =
     LazyLock::new(generate_code_from_lichess_weights);
 
 pub static BOOK_FROM_LICHESS_WEIGHTS: LazyLock<Book> = LazyLock::new(|| Book {
-    codes: (&*CODE_FROM_LICHESS_WEIGHTS)
-        .codes_for_values_array()
-        .map(|c| {
-            let nbits = c.len as usize;
-            let mut bv = BitVec::from_elem(nbits, false);
-            for i in 0..32 {
-                if (c.content >> i) & 1 == 1 {
-                    bv.set(nbits - 1 - i, true);
-                }
-            }
-
-            bv
-        }),
+    codes: (&*CODE_FROM_LICHESS_WEIGHTS).reversed_codes_for_values_array(),
 });
 
 pub fn get_decoder<'a>() -> Decoder<'a, u8> {
@@ -53,12 +44,22 @@ pub fn get_decoder<'a>() -> Decoder<'a, u8> {
 }
 
 pub struct Book {
-    codes: [BitVec; 256],
+    codes: [Code; 256],
 }
 
 impl Book {
-    pub fn encode(&self, buffer: &mut BitVec, symbol: u8) {
-        buffer.extend(&self.codes[symbol as usize]);
+    pub fn encode(&self, buffer: &mut EncodedGame, symbol: u8) {
+        let code = &self.codes[symbol as usize];
+        let bit_len = buffer.inner.len() * 64;
+        if buffer.bit_index + code.len as usize > bit_len {
+            buffer.inner.push(0);
+        }
+        buffer.inner.init_bits(
+            buffer.bit_index,
+            code.content as u64,
+            code.len.min(32) as u8,
+        );
+        buffer.bit_index += code.len as usize;
     }
 }
 

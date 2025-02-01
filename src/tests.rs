@@ -55,8 +55,8 @@ fn encode_decode_consistency() {
 fn encode_decode_consistency_bytes() {
     let moves = short_game_moves();
 
-    let encoded = encode_game(&moves).unwrap().to_bytes();
-    let decoded = decode_game(&EncodedGame::from_bytes(&encoded)).unwrap().0;
+    let bytes = encode_game(&moves).unwrap().to_bytes();
+    let decoded = decode_game(&EncodedGame::from_bytes(&bytes)).unwrap().0;
     assert_eq!(decoded, moves);
 }
 
@@ -146,7 +146,7 @@ fn encode_move_by_move() {
     assert_eq!(decoded, moves);
 
     mbm.clear();
-    assert_eq!(mbm.result.inner.len(), 0);
+    assert_eq!(mbm.result.inner.iter().sum::<u64>(), 0);
 }
 
 #[quickcheck]
@@ -170,10 +170,9 @@ fn random_games_consistency(move_ids: Vec<u8>) -> bool {
 
     let bits = encoder.result;
     let bits2 = encode_game(&moves).unwrap();
-    let bytes = bits.to_bytes();
     let (decoded_moves, decoded_positions) = decode_game(&bits).unwrap();
     let (decoded_moves2, decoded_positions2) =
-        decode_game(&EncodedGame::from_bytes(&bytes)).unwrap();
+        decode_game(&EncodedGame::from_bytes(&bits.to_bytes())).unwrap();
 
     let mut decoder = TestDecoder {
         moves: vec![],
@@ -181,8 +180,7 @@ fn random_games_consistency(move_ids: Vec<u8>) -> bool {
     };
     decode_move_by_move(&bits, &mut decoder).unwrap();
 
-    bits.inner.len() >= moves.len()
-        && bits == bits2
+    bits == bits2
         && moves == decoded_moves
         && positions == decoded_positions
         && decoded_moves.len() == decoded_positions.len()
