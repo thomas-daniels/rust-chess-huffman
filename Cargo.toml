@@ -15,7 +15,7 @@ shakmaty = "0.27"
 pgn-reader = "0.26"
 minimum_redundancy = "0.3"
 bitm = "0.4"
-bytemuck = "1.21"
+byteorder = "1.5"
 
 [dev-dependencies]
 criterion = "0.5"

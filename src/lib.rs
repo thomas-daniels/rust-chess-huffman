@@ -8,11 +8,13 @@ mod ranking;
 mod tests;
 
 use bitm::BitAccess;
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use codes::Book;
 use minimum_redundancy::DecodingResult;
 use shakmaty::san::{ParseSanError, SanError};
 use shakmaty::{Chess, Move, PlayError, Position};
 use std::fmt;
+use std::io::Cursor;
 
 /// The result of an encoding operation.
 pub type EncodeResult<T> = Result<T, GameEncodeError>;
@@ -115,11 +117,15 @@ impl EncodedGame {
         #[allow(clippy::cast_possible_truncation)]
         let m = (self.bit_index % 64) as u8;
         let padding = if m == 0 { 0 } else { 64 - m };
-        [
-            &bytemuck::cast_slice(&self.inner)[0..byte_count],
-            &[padding],
-        ]
-        .concat()
+
+        let mut wrt = vec![];
+        for x in &self.inner {
+            wrt.write_u64::<LittleEndian>(*x).unwrap();
+        }
+        wrt.truncate(byte_count);
+        wrt.push(padding);
+
+        wrt
     }
 
     /// Convert a byte vector (that was the output of `to_bytes`) to an `EncodedGame`.
@@ -130,12 +136,22 @@ impl EncodedGame {
         let padding_bytes = padding / 8;
         let bit_index = total_len_minus_one * 8 - (padding % 8);
         let content_slice = &bytes[0..total_len_minus_one];
-        EncodedGame {
-            inner: if padding_bytes != 0 {
-                bytemuck::cast_slice(&[content_slice, &vec![0; padding_bytes]].concat()).to_vec()
+        let full_slice = if padding_bytes != 0 {
+            &[content_slice, &vec![0; padding_bytes]].concat()
+        } else {
+            content_slice
+        };
+        let mut rdr = Cursor::new(full_slice);
+        let mut buffer = vec![];
+        loop {
+            if let Ok(x) = rdr.read_u64::<LittleEndian>() {
+                buffer.push(x);
             } else {
-                bytemuck::cast_slice(content_slice).to_vec()
-            },
+                break;
+            }
+        }
+        EncodedGame {
+            inner: buffer,
             bit_index,
         }
     }
