@@ -8,7 +8,6 @@ mod ranking;
 mod tests;
 
 use bitm::BitAccess;
-use bytemuck;
 use codes::Book;
 use minimum_redundancy::DecodingResult;
 use shakmaty::san::{ParseSanError, SanError};
@@ -104,12 +103,14 @@ pub struct EncodedGame {
 }
 
 impl EncodedGame {
+    #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
         let byte_count = if self.bit_index % 8 == 0 {
             self.bit_index / 8
         } else {
             self.bit_index / 8 + 1
         };
+        #[allow(clippy::cast_possible_truncation)]
         let m = (self.bit_index % 64) as u8;
         let padding = if m == 0 { 0 } else { 64 - m };
         [
@@ -119,6 +120,7 @@ impl EncodedGame {
         .concat()
     }
 
+    #[must_use]
     pub fn from_bytes(bytes: &[u8]) -> Self {
         let total_len_minus_one = bytes.len() - 1;
         let padding = bytes[total_len_minus_one] as usize;
@@ -135,7 +137,7 @@ impl EncodedGame {
         }
     }
 
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self {
             inner: vec![0; 256 / 64],
             bit_index: 0,
@@ -290,9 +292,9 @@ pub fn decode_game(encoded: &EncodedGame) -> DecodeResult<(Vec<Move>, Vec<Chess>
             DecodingResult::Incomplete => {
                 if decoder.consumed_fragments() == 0 {
                     break;
-                } else {
-                    return Err(GameDecodeError {});
                 }
+
+                return Err(GameDecodeError {});
             }
         }
     }
@@ -367,9 +369,9 @@ pub fn decode_move_by_move<T: MoveByMoveDecoder>(
             DecodingResult::Incomplete => {
                 if huff_decoder.consumed_fragments() == 0 {
                     break;
-                } else {
-                    return Err(GameDecodeError {});
                 }
+
+                return Err(GameDecodeError {});
             }
         }
     }

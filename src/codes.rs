@@ -36,11 +36,11 @@ static CODE_FROM_LICHESS_WEIGHTS: LazyLock<Coding<u8>> =
     LazyLock::new(generate_code_from_lichess_weights);
 
 pub static BOOK_FROM_LICHESS_WEIGHTS: LazyLock<Book> = LazyLock::new(|| Book {
-    codes: (&*CODE_FROM_LICHESS_WEIGHTS).reversed_codes_for_values_array(),
+    codes: (*CODE_FROM_LICHESS_WEIGHTS).reversed_codes_for_values_array(),
 });
 
 pub fn get_decoder<'a>() -> Decoder<'a, u8> {
-    (&*CODE_FROM_LICHESS_WEIGHTS).decoder()
+    (*CODE_FROM_LICHESS_WEIGHTS).decoder()
 }
 
 pub struct Book {
@@ -56,7 +56,7 @@ impl Book {
         }
         buffer.inner.init_bits(
             buffer.bit_index,
-            code.content as u64,
+            u64::from(code.content),
             code.len.min(32) as u8,
         );
         buffer.bit_index += code.len as usize;
