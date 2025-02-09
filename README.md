@@ -3,6 +3,8 @@
 
 # chess-huffman
 
+> Breaking change: games encoded with version >=0.7 cannot be decoded with version <0.7 and vice versa.
+
 A Rust crate for [Huffman compression](https://en.wikipedia.org/wiki/Huffman_coding) of chess games. Builds upon Piotr Beling's [`bsuccinct`](https://github.com/beling/bsuccinct-rs), [Niklas Fiekas](https://github.com/niklasf)'s crates [`shakmaty`](https://crates.io/crates/shakmaty) and [`pgn-reader`](https://crates.io/crates/pgn-reader), and his [blog post on the topic](https://lichess.org/blog/Wqa7GiAAAOIpBLoY/developer-update-275-improved-game-compression) and [Java implementation](https://github.com/lichess-org/compression/tree/master/src/main/java/game).
 
 Refer to the documentation for up-to-date usage examples:
