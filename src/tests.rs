@@ -72,34 +72,6 @@ fn expected_error() {
     assert!(encode_game(&moves).is_err());
 }
 
-struct TestDecoder {
-    moves: Vec<Move>,
-    positions: Vec<Chess>,
-}
-
-impl MoveByMoveDecoder for TestDecoder {
-    fn decoded_move(&mut self, mv: Move, position: &Chess) -> bool {
-        self.moves.push(mv);
-        self.positions.push(position.clone());
-
-        true
-    }
-}
-
-#[test]
-fn encode_decode_consistency_move_by_move() {
-    let moves = short_game_moves();
-
-    let encoded = encode_game(&moves).unwrap();
-
-    let mut decoder = TestDecoder {
-        moves: vec![],
-        positions: vec![],
-    };
-    decode_move_by_move(&encoded, &mut decoder).unwrap();
-    assert_eq!(decoder.moves, moves);
-}
-
 #[test]
 fn encode_decode_consistency_pgn() {
     let moves = short_game_moves();
@@ -107,30 +79,6 @@ fn encode_decode_consistency_pgn() {
     let encoded = encode_pgn("1. d4 e5 2. dxe5 Ke7 3. Qd2").unwrap();
     let decoded = decode_game(&encoded).unwrap().0;
     assert_eq!(decoded, moves);
-}
-
-struct TestDecoderEarlyStop {
-    moves: Vec<Move>,
-}
-
-impl MoveByMoveDecoder for TestDecoderEarlyStop {
-    fn decoded_move(&mut self, mv: Move, _position: &Chess) -> bool {
-        self.moves.push(mv);
-
-        self.moves.len() < 3
-    }
-}
-
-#[test]
-fn decoder_early_stop() {
-    let moves = short_game_moves();
-
-    let encoded = encode_game(&moves).unwrap();
-
-    let mut decoder = TestDecoderEarlyStop { moves: vec![] };
-    decode_move_by_move(&encoded, &mut decoder).unwrap();
-    assert_eq!(decoder.moves.len(), 3);
-    assert_eq!(decoder.moves, moves[..3]);
 }
 
 #[test]
@@ -174,18 +122,10 @@ fn random_games_consistency(move_ids: Vec<u8>) -> bool {
     let (decoded_moves2, decoded_positions2) =
         decode_game(&EncodedGame::from_bytes(&bits.to_bytes())).unwrap();
 
-    let mut decoder = TestDecoder {
-        moves: vec![],
-        positions: vec![],
-    };
-    decode_move_by_move(&bits, &mut decoder).unwrap();
-
     bits == bits2
         && moves == decoded_moves
         && positions == decoded_positions
         && decoded_moves.len() == decoded_positions.len()
-        && moves == decoder.moves
-        && positions == decoder.positions
         && decoded_moves == decoded_moves2
         && decoded_positions == decoded_positions2
 }

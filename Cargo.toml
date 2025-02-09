@@ -1,6 +1,6 @@
 [package]
 name = "chess-huffman"
-version = "0.7.0"
+version = "0.8.0"
 authors = ["Thomas Daniels <daniels.thomas@pm.me>"]
 edition = "2021"
 license = "GPL-3.0+"

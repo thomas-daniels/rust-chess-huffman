@@ -10,7 +10,7 @@ mod tests;
 use bitm::BitAccess;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use codes::Book;
-use minimum_redundancy::DecodingResult;
+use minimum_redundancy::{Decoder, DecodingResult};
 use shakmaty::san::{ParseSanError, SanError};
 use shakmaty::{Chess, Move, PlayError, Position};
 use std::fmt;
@@ -283,114 +283,92 @@ pub fn encode_pgn_file<P: AsRef<std::path::Path>>(path: P) -> EncodeResult<Encod
 /// # Ok(())
 /// # }
 pub fn decode_game(encoded: &EncodedGame) -> DecodeResult<(Vec<Move>, Vec<Chess>)> {
-    let mut decoder = codes::get_decoder();
-
     let mut moves = vec![];
-    let mut pos = Chess::default();
     let mut positions = vec![];
 
-    let mut iter = encoded.inner.bit_in_range_iter(0..encoded.bit_index);
-
-    loop {
-        match decoder.decode_next(&mut iter) {
-            DecodingResult::Value(rank) => {
-                let m =
-                    ranking::nth_from_position(*rank as usize, &pos).ok_or(GameDecodeError {})?;
-                pos.play_unchecked(&m);
-                moves.push(m);
-                positions.push(pos.clone());
-            }
-            DecodingResult::Invalid => {
-                return Err(GameDecodeError {});
-                // this shouldn't happen though: according to minimum_redundancy's docs, Invalid can only be returned if the bits per fragment > 1
-            }
-            DecodingResult::Incomplete => {
-                if decoder.consumed_fragments() == 0 {
-                    break;
-                }
-
-                return Err(GameDecodeError {});
-            }
-        }
+    let decoder = MoveByMoveDecoder::new(encoded);
+    for d in decoder {
+        let (m, pos) = d?;
+        moves.push(m);
+        positions.push(pos);
     }
+
     Ok((moves, positions))
 }
 
-/// Decodes a bit vector into a game, calling an implementation of
-/// the [`MoveByMoveDecoder`] trait for each move. This allows for more
-/// fine-grained processing than [`decode_game`].
-///
-/// # Arguments
-///
-/// * `bits` - A bit vector of a compressed chess game.
-/// * `decoder` - A decoder implementing [`MoveByMoveDecoder`].
-///
-/// # Errors
-///
-/// [`GameDecodeError`] if the game contains invalid moves.
+/// Iterator to decode a game move by move, rather than all at once.
+/// This allows for more fine-grained processing than [`decode_game`].
 ///
 /// # Examples
 ///
 /// ```
-/// # use chess_huffman::{encode_pgn, decode_move_by_move};
-/// # use chess_huffman::{GameEncodeError, MoveByMoveDecoder};
-/// use shakmaty::{Chess, Move};
-///
-/// struct ExampleDecoder {
-///     capture_count: u8
-/// }
-///
-/// impl MoveByMoveDecoder for ExampleDecoder {
-///     fn decoded_move(&mut self, mv: Move, _position: &Chess) -> bool {
-///         if (mv.is_capture()) {
-///             self.capture_count += 1;
-///         }
-///
-///         true
-///     }
-/// }
+/// # use chess_huffman::{encode_pgn, MoveByMoveDecoder};
+/// # use shakmaty::Position;
 ///
 /// # fn try_main() -> Result<(), Box<dyn std::error::Error>> {
 /// let encoded = encode_pgn("1. e4 c5 2. Nf3 e6 3. c3 d5 4. exd5")?;
-/// let mut decoder = ExampleDecoder { capture_count: 0 };
-/// decode_move_by_move(&encoded, &mut decoder)?;
-/// assert_eq!(decoder.capture_count, 1);
+/// let mut capture_count = 0;
+/// let mut decoder = MoveByMoveDecoder::new(&encoded);
+/// for d in decoder {
+///     let (mv, _) = d?;
+///     if mv.is_capture() {
+///         capture_count += 1;
+///     }
+/// }
+/// assert_eq!(capture_count, 1);
 /// # Ok(())
 /// # }
-pub fn decode_move_by_move<T: MoveByMoveDecoder>(
-    encoded: &EncodedGame,
-    decoder: &mut T,
-) -> DecodeResult<()> {
-    let mut huff_decoder = codes::get_decoder();
+pub struct MoveByMoveDecoder<'a> {
+    bit_iter: bitm::BitIterator<'a>,
+    huff_decoder: Decoder<'a, u8>,
+    pos: Chess,
+}
 
-    let mut iter = encoded.inner.bit_in_range_iter(0..encoded.bit_index);
+impl<'a> MoveByMoveDecoder<'a> {
+    /// Construct a new [`MoveByMoveDecoder`] from an [`EncodedGame`].
+    #[must_use]
+    pub fn new(encoded: &'a EncodedGame) -> Self {
+        let huff_decoder = codes::get_decoder();
+        let bit_iter = encoded.inner.bit_in_range_iter(0..encoded.bit_index);
+        Self {
+            bit_iter,
+            huff_decoder,
+            pos: Chess::default(),
+        }
+    }
+}
 
-    let mut pos = Chess::default();
-    loop {
-        match huff_decoder.decode_next(&mut iter) {
+impl<'a> Iterator for MoveByMoveDecoder<'a> {
+    type Item = DecodeResult<(Move, Chess)>;
+
+    /// Returns the next move and the resulting position when the move is played.
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.huff_decoder.decode_next(&mut self.bit_iter) {
             DecodingResult::Value(rank) => {
                 let m =
-                    ranking::nth_from_position(*rank as usize, &pos).ok_or(GameDecodeError {})?;
-                pos.play_unchecked(&m);
-                let cont = decoder.decoded_move(m, &pos);
-                if !cont {
-                    break;
+                    ranking::nth_from_position(*rank as usize, &self.pos).ok_or(GameDecodeError {});
+                match m {
+                    Ok(m) => {
+                        self.pos.play_unchecked(&m);
+
+                        Some(Ok((m, self.pos.clone())))
+                    }
+                    Err(e) => Some(Err(e)),
                 }
             }
             DecodingResult::Invalid => {
-                return Err(GameDecodeError {});
+                Some(Err(GameDecodeError {}))
                 // this shouldn't happen though: according to minimum_redundancy's docs, Invalid can only be returned if the bits per fragment > 1
             }
             DecodingResult::Incomplete => {
-                if huff_decoder.consumed_fragments() == 0 {
-                    break;
+                if self.huff_decoder.consumed_fragments() == 0 {
+                    None
+                } else {
+                    Some(Err(GameDecodeError {}))
                 }
-
-                return Err(GameDecodeError {});
             }
         }
     }
-    Ok(())
 }
 
 /// An encoder that lets you add moves one-by-one, rather than a whole game at once.
@@ -490,47 +468,4 @@ impl Default for MoveByMoveEncoder<'_> {
     fn default() -> Self {
         Self::new()
     }
-}
-
-/// A trait for decoding games move-by-move.
-///
-/// # Examples
-///
-/// ```
-/// # use chess_huffman::{encode_pgn, decode_move_by_move};
-/// # use chess_huffman::{GameEncodeError, MoveByMoveDecoder};
-/// use shakmaty::{Chess, Move};
-///
-/// struct ExampleDecoder {
-///     capture_count: u8
-/// }
-///
-/// impl MoveByMoveDecoder for ExampleDecoder {
-///     fn decoded_move(&mut self, mv: Move, _position: &Chess) -> bool {
-///         if (mv.is_capture()) {
-///             self.capture_count += 1;
-///         }
-///
-///         true
-///     }
-/// }
-///
-/// # fn try_main() -> Result<(), Box<dyn std::error::Error>> {
-/// let encoded = encode_pgn("1. e4 c5 2. Nf3 e6 3. c3 d5 4. exd5")?;
-/// let mut decoder = ExampleDecoder { capture_count: 0 };
-/// decode_move_by_move(&encoded, &mut decoder)?;
-/// assert_eq!(decoder.capture_count, 1);
-/// # Ok(())
-/// # }
-pub trait MoveByMoveDecoder {
-    /// Called when a move is decoded.
-    ///
-    /// The returned boolean signals whether decoding the rest of the game should continue.
-    /// Return `false` to stop the decoding process early.
-    ///
-    /// # Arguments
-    ///
-    /// * `mv` - The decoded move.
-    /// * `position` - The chess position after the decoded move has been played.
-    fn decoded_move(&mut self, mv: Move, position: &Chess) -> bool;
 }
