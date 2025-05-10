@@ -2,7 +2,7 @@
 name = "chess-huffman"
 version = "0.8.1"
 authors = ["Thomas Daniels <daniels.thomas@pm.me>"]
-edition = "2021"
+edition = "2024"
 license = "GPL-3.0+"
 keywords = ["huffman", "compression", "decompression", "chess"]
 readme = "README.md"
@@ -14,7 +14,7 @@ description = "Compresses chess games using Huffman coding"
 shakmaty = "0.27"
 pgn-reader = "0.26"
 minimum_redundancy = "0.3"
-bitm = "0.4"
+bitm = "0.5"
 byteorder = "1.5"
 
 [dev-dependencies]
