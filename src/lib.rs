@@ -132,7 +132,12 @@ impl EncodedGame {
     #[must_use]
     pub fn from_bytes(bytes: &[u8]) -> Self {
         let total_len_minus_one = bytes.len() - 1;
-        let padding = bytes[total_len_minus_one] as usize;
+
+        // `padding` can be at most 63, so occupying 6 bits.
+        // Use only those bits, and ignore the rest.
+        // This allows users of EncodedGame to store arbitrary metadata in the other 2 bits.
+        let padding = (bytes[total_len_minus_one] & 0b0011_1111) as usize;
+
         let padding_bytes = padding / 8;
         let bit_index = total_len_minus_one * 8 - (padding % 8);
         let content_slice = &bytes[0..total_len_minus_one];
