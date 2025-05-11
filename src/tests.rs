@@ -1,6 +1,6 @@
 use super::*;
 use quickcheck_macros::quickcheck;
-use shakmaty::{Role, Square};
+use shakmaty::{Position, Role, Square};
 
 fn short_game_moves() -> Vec<Move> {
     vec![
@@ -95,6 +95,45 @@ fn encode_move_by_move() {
 
     mbm.clear();
     assert_eq!(mbm.result.inner.iter().sum::<u64>(), 0);
+}
+
+#[test]
+fn iterator_consistency() {
+    let encoded = encode_pgn("1. Nf3 c5 2. g3 Nc6 3. Bg2 e5 4. O-O e4 5. Ne1 f5 
+    6. d3 d5 7. dxe4 fxe4 8. Bf4 Nf6 9. e3 Be7 10. Nd2 Bg4 11. c3 Bxd1 12. Rxd1 d4 13. Nc2 d3 14. Na3 O-O 15. Nb5 a6 
+    16. Bc7 axb5 17. Bxd8 Raxd8 18. Nxe4 Nxe4 19. Bxe4 c4 20. Bxc6 bxc6 21. Ra1 Ra8 22. Rfd1 c5 23. a3 b4 24. cxb4 cxb4 
+    25. a4 Rac8 26. Kf1 Rfd8 27. f4 c3 28. bxc3 bxc3 29. Kf2 c2 30. Rdc1 Bf6 31. Ra2 d2 32. Raxc2 Rxc2 33. Rxc2 d1=Q 0-1").unwrap();
+
+    let mbm1 = MoveByMoveDecoder::new(&encoded);
+    let mbm2 = MoveByMoveDecoder::new(&encoded);
+    let mbm3 = MoveByMoveDecoder::new(&encoded);
+
+    let moves1 = mbm1
+        .into_iter_moves()
+        .map(|r| r.unwrap())
+        .collect::<Vec<_>>();
+    let positions1 = mbm2
+        .into_iter_positions()
+        .map(|r| r.unwrap())
+        .collect::<Vec<_>>();
+    let combination = mbm3
+        .into_iter_moves_and_positions()
+        .map(|r| r.unwrap())
+        .collect::<Vec<_>>();
+    let moves2 = combination
+        .iter()
+        .map(|(m, _)| m.clone())
+        .collect::<Vec<_>>();
+    let positions2 = combination
+        .iter()
+        .map(|(_, p)| p.clone())
+        .collect::<Vec<_>>();
+
+    assert_eq!(moves1, moves2);
+    assert_eq!(positions1, positions2);
+
+    assert_eq!(moves1[12].to(), Square::E4);
+    assert_eq!(positions1[12].board().role_at(Square::E4), Some(Role::Pawn));
 }
 
 #[quickcheck]

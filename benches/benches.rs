@@ -1,5 +1,5 @@
-use chess_huffman::{decode_game, encode_pgn, EncodedGame};
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use chess_huffman::{EncodedGame, decode_game, encode_pgn};
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use shakmaty::Square;
 
 static PGN: &'static str = "1. e4 c5 2. c3 d5 3. exd5 Nf6 4. Bb5+ Bd7 5. Bxd7+ Qxd7 

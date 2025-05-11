@@ -292,7 +292,7 @@ pub fn decode_game(encoded: &EncodedGame) -> DecodeResult<(Vec<Move>, Vec<Chess>
     let mut positions = vec![];
 
     let decoder = MoveByMoveDecoder::new(encoded);
-    for d in decoder {
+    for d in decoder.into_iter_moves_and_positions() {
         let (m, pos) = d?;
         moves.push(m);
         positions.push(pos);
@@ -314,7 +314,7 @@ pub fn decode_game(encoded: &EncodedGame) -> DecodeResult<(Vec<Move>, Vec<Chess>
 /// let encoded = encode_pgn("1. e4 c5 2. Nf3 e6 3. c3 d5 4. exd5")?;
 /// let mut capture_count = 0;
 /// let mut decoder = MoveByMoveDecoder::new(&encoded);
-/// for d in decoder {
+/// for d in decoder.into_iter_moves_and_positions() {
 ///     let (mv, _) = d?;
 ///     if mv.is_capture() {
 ///         capture_count += 1;
@@ -343,11 +343,9 @@ impl<'a> MoveByMoveDecoder<'a> {
     }
 }
 
-impl<'a> Iterator for MoveByMoveDecoder<'a> {
-    type Item = DecodeResult<(Move, Chess)>;
-
-    /// Returns the next move and the resulting position when the move is played.
-    fn next(&mut self) -> Option<Self::Item> {
+impl MoveByMoveDecoder<'_> {
+    /// Returns the next move.
+    pub fn next_move(&mut self) -> Option<DecodeResult<Move>> {
         match self.huff_decoder.decode_next(&mut self.bit_iter) {
             DecodingResult::Value(rank) => {
                 let m =
@@ -356,7 +354,7 @@ impl<'a> Iterator for MoveByMoveDecoder<'a> {
                     Ok(m) => {
                         self.pos.play_unchecked(&m);
 
-                        Some(Ok((m, self.pos.clone())))
+                        Some(Ok(m))
                     }
                     Err(e) => Some(Err(e)),
                 }
@@ -373,6 +371,84 @@ impl<'a> Iterator for MoveByMoveDecoder<'a> {
                 }
             }
         }
+    }
+
+    /// Returns the resulting position when the next move is played.
+    pub fn next_position(&mut self) -> Option<DecodeResult<&Chess>> {
+        if let Some(move_result) = self.next_move() {
+            match move_result {
+                Ok(_) => Some(Ok(&self.pos)),
+                Err(e) => Some(Err(e)),
+            }
+        } else {
+            None
+        }
+    }
+
+    /// Returns the next move and the resulting position when the move is played.
+    pub fn next_move_and_position(&mut self) -> Option<DecodeResult<(Move, &Chess)>> {
+        if let Some(move_result) = self.next_move() {
+            match move_result {
+                Ok(m) => Some(Ok((m, &self.pos))),
+                Err(e) => Some(Err(e)),
+            }
+        } else {
+            None
+        }
+    }
+
+    /// Turns the decoder into an iterator over the moves in the chess game.
+    pub fn into_iter_moves(self) -> impl Iterator<Item = DecodeResult<Move>> {
+        struct MoveIter<'a> {
+            decoder: MoveByMoveDecoder<'a>,
+        }
+        impl Iterator for MoveIter<'_> {
+            type Item = DecodeResult<Move>;
+
+            fn next(&mut self) -> Option<Self::Item> {
+                self.decoder.next_move()
+            }
+        }
+
+        MoveIter { decoder: self }
+    }
+
+    /// Turns the decoder into an iterator over the positions in the chess game.
+    /// The first yielded position is the position after the first move.
+    pub fn into_iter_positions(self) -> impl Iterator<Item = DecodeResult<Chess>> {
+        struct PosIter<'a> {
+            decoder: MoveByMoveDecoder<'a>,
+        }
+        impl Iterator for PosIter<'_> {
+            type Item = DecodeResult<Chess>;
+
+            fn next(&mut self) -> Option<Self::Item> {
+                self.decoder.next_position().map(|r| r.cloned())
+            }
+        }
+
+        PosIter { decoder: self }
+    }
+
+    /// Turns the decoder into an iterator over the moves and positions in the chess game.
+    /// The yielded position is the position after the move.
+    pub fn into_iter_moves_and_positions(
+        self,
+    ) -> impl Iterator<Item = DecodeResult<(Move, Chess)>> {
+        struct MovePosIter<'a> {
+            decoder: MoveByMoveDecoder<'a>,
+        }
+        impl Iterator for MovePosIter<'_> {
+            type Item = DecodeResult<(Move, Chess)>;
+
+            fn next(&mut self) -> Option<Self::Item> {
+                self.decoder
+                    .next_move_and_position()
+                    .map(|r| r.map(|(m, p)| (m, p.clone())))
+            }
+        }
+
+        MovePosIter { decoder: self }
     }
 }
 
@@ -455,7 +531,7 @@ impl MoveByMoveEncoder<'_> {
                 return Err(GameEncodeError {
                     kind: GameEncodeErrorKind::IllegalMove,
                     explanation: format!("Illegal move {m}"),
-                })
+                });
             }
         }
 

@@ -18,11 +18,7 @@ pub fn move_rank(pos: &Chess, m: &Move) -> Option<usize> {
         }
     }
 
-    if is_legal {
-        Some(counter)
-    } else {
-        None
-    }
+    if is_legal { Some(counter) } else { None }
 }
 
 pub fn nth_from_position(n: usize, pos: &Chess) -> Option<Move> {
