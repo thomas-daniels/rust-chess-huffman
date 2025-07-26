@@ -86,8 +86,8 @@ fn encode_move_by_move() {
     let moves = short_game_moves();
 
     let mut mbm = MoveByMoveEncoder::new();
-    for m in &moves {
-        mbm.add_move(&m).unwrap();
+    for &m in &moves {
+        mbm.add_move(m).unwrap();
     }
 
     let decoded = decode_game(&mbm.result).unwrap().0;
@@ -149,8 +149,8 @@ fn random_games_consistency(move_ids: Vec<u8>) -> bool {
         }
         let i = m as usize % legal_moves.len();
         let choice = legal_moves[i].clone();
-        pos.play_unchecked(&choice);
-        encoder.add_move(&choice).unwrap();
+        pos.play_unchecked(choice);
+        encoder.add_move(choice).unwrap();
         moves.push(choice);
         positions.push(pos.clone());
     }

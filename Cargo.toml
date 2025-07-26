@@ -11,8 +11,8 @@ categories = ["compression", "encoding", "algorithms", "games"]
 description = "Compresses chess games using Huffman coding"
 
 [dependencies]
-shakmaty = "0.27"
-pgn-reader = "0.26"
+shakmaty = "0.29"
+pgn-reader = "0.28"
 minimum_redundancy = "0.3"
 bitm = "0.5"
 byteorder = "1.5"

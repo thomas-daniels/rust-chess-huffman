@@ -206,7 +206,7 @@ impl EncodedGame {
 /// ```
 pub fn encode_game(moves: &[Move]) -> EncodeResult<EncodedGame> {
     let mut encoder = MoveByMoveEncoder::new();
-    for m in moves {
+    for &m in moves {
         encoder.add_move(m)?;
     }
     Ok(encoder.result)
@@ -235,7 +235,7 @@ pub fn encode_game(moves: &[Move]) -> EncodeResult<EncodedGame> {
 /// # }
 /// ```
 pub fn encode_pgn<T: AsRef<[u8]>>(pgn: T) -> EncodeResult<EncodedGame> {
-    let mut reader = pgn_reader::BufferedReader::new_cursor(pgn.as_ref());
+    let mut reader = pgn_reader::Reader::new(Cursor::new(pgn.as_ref()));
 
     let mut encoder = pgn::Encoder::new();
     let bits = reader
@@ -256,7 +256,7 @@ pub fn encode_pgn<T: AsRef<[u8]>>(pgn: T) -> EncodeResult<EncodedGame> {
 /// its `kind` attribute tells more about the error reason.
 pub fn encode_pgn_file<P: AsRef<std::path::Path>>(path: P) -> EncodeResult<EncodedGame> {
     let file = std::fs::File::open(path)?;
-    let mut reader = pgn_reader::BufferedReader::new(file);
+    let mut reader = pgn_reader::Reader::new(file);
 
     let mut encoder = pgn::Encoder::new();
     let bits = reader
@@ -352,7 +352,7 @@ impl MoveByMoveDecoder<'_> {
                     ranking::nth_from_position(*rank as usize, &self.pos).ok_or(GameDecodeError {});
                 match m {
                     Ok(m) => {
-                        self.pos.play_unchecked(&m);
+                        self.pos.play_unchecked(m);
 
                         Some(Ok(m))
                     }
@@ -465,7 +465,7 @@ impl MoveByMoveDecoder<'_> {
 /// let moves: Vec<Move> = vec![ /* ... */ ];
 /// let mut encoder = MoveByMoveEncoder::new();
 /// for m in moves {
-///    encoder.add_move(&m)?;
+///    encoder.add_move(m)?;
 /// }
 /// # Ok(())
 /// # }
@@ -507,12 +507,12 @@ impl MoveByMoveEncoder<'_> {
     /// let moves: Vec<Move> = vec![ /* ... */ ];
     /// let mut encoder = MoveByMoveEncoder::new();
     /// for m in moves {
-    ///    encoder.add_move(&m)?;
+    ///    encoder.add_move(m)?;
     /// }
     /// # Ok(())
     /// # }
     /// ```
-    pub fn add_move(&mut self, m: &Move) -> EncodeResult<()> {
+    pub fn add_move(&mut self, m: Move) -> EncodeResult<()> {
         match ranking::move_rank(&self.pos, m) {
             Some(rank) => {
                 if rank > 255 {

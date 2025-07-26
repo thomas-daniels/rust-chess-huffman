@@ -3,14 +3,14 @@ use shakmaty::{Chess, Color, Move, Piece, Position, Role, Square};
 
 type Score = i32;
 
-pub fn move_rank(pos: &Chess, m: &Move) -> Option<usize> {
+pub fn move_rank(pos: &Chess, m: Move) -> Option<usize> {
     let legals = pos.legal_moves();
     let mut counter = 0;
     let score = move_score(pos, m);
     let mut is_legal = false;
     for lm in legals {
-        if is_legal || m != &lm {
-            if score < move_score(pos, &lm) {
+        if is_legal || m != lm {
+            if score < move_score(pos, lm) {
                 counter += 1;
             }
         } else {
@@ -23,17 +23,17 @@ pub fn move_rank(pos: &Chess, m: &Move) -> Option<usize> {
 
 pub fn nth_from_position(n: usize, pos: &Chess) -> Option<Move> {
     let legals = pos.legal_moves();
-    let mut scored_legals: Vec<(&Move, Score)> =
-        legals.iter().map(|m| (m, -move_score(pos, m))).collect();
+    let mut scored_legals: Vec<(Move, Score)> =
+        legals.iter().map(|&m| (m, -move_score(pos, m))).collect();
     if legals.len() > n {
         let (_, m, _) = scored_legals.select_nth_unstable_by_key(n, |(_, score)| *score);
-        Some(m.0.clone())
+        Some(m.0)
     } else {
         None
     }
 }
 
-fn move_score(pos: &Chess, m: &Move) -> Score {
+fn move_score(pos: &Chess, m: Move) -> Score {
     let promotion = Score::from(m.promotion().unwrap_or(Role::Pawn)) - 1;
     let capture = Score::from(m.is_capture());
     let pawn_defense: Score = if any_defending_pawns(pos, m.to()) {
@@ -69,7 +69,7 @@ fn piece_value(piece: Piece, square: Square) -> i16 {
 }
 
 // https://github.com/niklasf/rust-pgn-reader/blob/compression-with-spsa/examples/compression.rs#L126
-fn move_value(turn: Color, m: &Move) -> i16 {
+fn move_value(turn: Color, m: Move) -> i16 {
     let role = m.role();
     piece_value(role.of(turn), m.to()) - piece_value(role.of(turn), m.from().expect("no drops"))
 }
@@ -109,7 +109,7 @@ mod tests {
         assert_eq!(
             move_value(
                 Color::White,
-                &Move::Normal {
+                Move::Normal {
                     role: Role::Knight,
                     from: Square::E3,
                     to: Square::D5,
@@ -131,7 +131,7 @@ mod tests {
         assert_eq!(
             move_score(
                 &Chess::default(),
-                &Move::Normal {
+                Move::Normal {
                     role: Role::Pawn,
                     from: Square::E2,
                     to: Square::E4,
@@ -160,7 +160,7 @@ mod tests {
         assert_eq!(
             move_rank(
                 &Chess::default(),
-                &Move::Normal {
+                Move::Normal {
                     role: Role::Pawn,
                     from: Square::E2,
                     to: Square::E4,
