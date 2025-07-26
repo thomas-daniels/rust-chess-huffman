@@ -18,7 +18,7 @@ bitm = "0.5"
 byteorder = "1.5"
 
 [dev-dependencies]
-criterion = "0.5"
+criterion = "0.7"
 quickcheck = "1"
 quickcheck_macros = "1"
 

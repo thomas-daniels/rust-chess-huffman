@@ -1,6 +1,7 @@
 use chess_huffman::{EncodedGame, decode_game, encode_pgn};
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use criterion::{Criterion, criterion_group, criterion_main};
 use shakmaty::Square;
+use std::hint::black_box;
 
 static PGN: &'static str = "1. e4 c5 2. c3 d5 3. exd5 Nf6 4. Bb5+ Bd7 5. Bxd7+ Qxd7 
     6. d4 cxd4 7. Qxd4 Qxd5 8. Nf3 Nc6 9. Qxd5 Nxd5 10. O-O e5 11. Re1 f6 
